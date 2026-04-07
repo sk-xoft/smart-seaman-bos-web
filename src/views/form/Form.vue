@@ -1,0 +1,140 @@
+<script setup>
+import { Form, Field } from "vee-validate";
+import { Alert } from '@/components';
+import { storeToRefs } from 'pinia';
+import { useAuthStore, useFormsStore } from '@/stores';
+
+import Title from './partial/_title.vue';
+import Breadcrumb from './partial/_breadcrumb.vue';
+import ConfirmPopup from './partial/_confirm_popup.vue';
+
+const authStore = useAuthStore();
+const { user } = storeToRefs(authStore);
+
+const formsStore = useFormsStore();
+const { forms, size, lastNum, currentPage } = storeToRefs(formsStore);
+
+formsStore.getAllForms();
+
+function handlePageChanged(page) {
+    formsStore.currentPage = page;
+    formsStore.lastNum = formsStore.size * page;
+
+    formsStore.getAllForms();
+}
+
+</script>
+
+<template>
+    <Alert/>
+    <Title title="ฟอร์ม" />
+    <Breadcrumb link_menu="/form" name_menu="ฟอร์ม" title="ค้นหา" />
+    
+    <div class="flex justify-end mb-3">
+        <router-link class="btn btn-sm px-5 btn-primary mb-2" :to="`/form/add`">
+            <i class="fa fa-plus mr-3 text-xl"></i>
+            เพิ่ม
+        </router-link>
+    </div>
+    <div class="card overflow-x-auto bg-base-200">
+        <div class="card-body">
+            <h3 class="text-xl text-white font-semibold mb-3">ผลการค้นหา</h3>
+            <table class="table table-striped w-full rounded-none text-center">
+                <thead>
+                    <tr>
+                        <th class="bg-base-300">ลำดับที่</th>
+                        <th class="bg-base-300">ชื่อแบบฟอร์ม</th>
+                        <th class="bg-base-300">วันที่เพิ่ม</th>
+                        <th class="bg-base-300">เพิ่มโดย</th>
+                        <th class="bg-base-300">เอกสาร</th>
+                        <th class="bg-base-300">Actions</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <template v-if="forms">
+                        <tr v-for="form in forms.formList" :key="form.id">
+                            <td class="whitespace-normal">{{ form.formNum }}</td>
+                            <td class="whitespace-normal">{{ form.formName }}</td>
+                            <td class="whitespace-normal">{{ convertDateFormat(form.createDate) }}</td>
+                            <td class="whitespace-normal">{{ form.createBy ? form.createBy : '-' }}</td>
+                            <td class="whitespace-normal text-center"><button class="btn btn-sm btn-primary" @click="formsStore.preview(form.formId)"><i class="fa fa-eye"></i></button></td>
+                            <td style="white-space: nowrap">
+                                <router-link :to="`/form/edit/${form.formId}`" class="btn btn-sm btn-primary mr-1"><i class="fa-solid fa-pen-to-square"></i></router-link>
+                                <label for="onDelete" @click="passId(form.formId)" class="btn btn-sm btn-danger btn-delete-user" :disabled="form.isDeleting">
+                                    <span><i class="fa-solid fa-trash"></i></span>
+                                </label>
+                            </td>
+                        </tr>
+                        <tr v-if="forms.loading">
+                            <td colspan="9" class="text-center">
+                                <svg class="animate-spin h-9 w-9 text-white m-auto" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                                </svg>
+                            </td>
+                        </tr>
+                        <tr v-if="forms.error">
+                            <td colspan="9" class="text-center">
+                                <div class="text-danger">เกิดข้อผิดพลาดไม่สามารถโหลดข้อมูลคอร์สได้ : {{forms.error}}</div>
+                            </td>
+                        </tr>
+                    </template>
+                    <template v-else>
+                        <tr>
+                            <td colspan="9" class="text-center">
+                                ไม่มีข้อมูล
+                            </td>
+                        </tr>
+                    </template>
+                </tbody>
+            </table>
+
+            <template v-if="forms">
+                <template v-if="forms.totalData > 20">
+                    <VueTailwindPagination class="pagination"
+                        :current="currentPage"
+                        :total="forms.totalData"
+                        :per-page="size"
+                        @page-changed="handlePageChanged($event)"
+                    />
+                </template>
+            </template>
+        </div>
+    </div>
+    <ConfirmPopup :id="itemId"/>
+</template>
+
+<script>
+import '@ocrv/vue-tailwind-pagination/styles'
+import VueTailwindPagination from '@ocrv/vue-tailwind-pagination'
+import { storeToRefs } from 'pinia';
+import { useFormsStore } from '@/stores';
+
+export default {
+    components: {
+        VueTailwindPagination,
+    },
+    data() {
+        return {
+            itemId: 0,
+            forms: null,
+        }
+    },
+
+    methods: {
+        passId(id) {
+            this.itemId = id
+        },
+        convertDateFormat(isoDate){
+            const date = new Date(isoDate);
+            const day = date.getDate().toString().padStart(2, "0");
+            const month = (date.getMonth() + 1).toString().padStart(2, "0");
+            const year = date.getFullYear().toString();
+
+            const convertedDateString = `${day}/${month}/${year}`;
+
+            return convertedDateString;
+        },
+    },
+}
+</script>
