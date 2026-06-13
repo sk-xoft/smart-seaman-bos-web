@@ -30,7 +30,7 @@ const { menus, menus_operation, menus_system, url_img_profile, profile } = store
                     <template v-else>
                         <template v-if="url_img_profile.startsWith('data:application/json;base64,')">
                             <span class="with-short-name">
-                                {{profile.shortName}}
+                                {{profile?.shortName || 'U'}}
                             </span>
                         </template>
                         <template v-else>
@@ -41,11 +41,11 @@ const { menus, menus_operation, menus_system, url_img_profile, profile } = store
             </div>
             <!-- <h1 class="text-xl font-normal no-underline text-primary my-2">{{user.firstName}}</h1> -->
             <h1 class="text-lg font-normal no-underline text-primary">{{ user.data.username }}</h1>
-            <span class="text-md font-light no-underline text-white">{{ profile.roleName }}</span>
+            <span class="text-md font-light no-underline text-white">{{ profile?.roleName || 'User' }}</span>
         </div>
         <div class="menu-sidebar overflow-y-auto">
              <ul class="menu w-full">
-                 <template v-if="menus_operation.length">
+                 <template v-if="menus_operation && menus_operation.length">
                      <div class="heading-menu -operation px-3 mb-3">
                         <h3 class="text-xl font-medium text-primary border-b py-3 border-slate-700">Operation</h3>
                     </div>
@@ -62,7 +62,7 @@ const { menus, menus_operation, menus_system, url_img_profile, profile } = store
                         </li>
                     </template>
                  </template>
-                <template v-if="menus_system.length">
+                <template v-if="menus_system && menus_system.length">
                     <div class="heading-menu -System px-3 mb-3">
                         <h3 class="text-xl font-medium text-primary border-b py-3 border-slate-700">System</h3>
                     </div>

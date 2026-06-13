@@ -7,7 +7,6 @@ import '@quasar/extras/material-icons/material-icons.css'
 // import 'quasar/src/css/index.sass'
 import VueDatePicker from '@vuepic/vue-datepicker';
 import LvColorpicker from 'lightvue/color-picker';
-import LvTextEditor from 'lightvue/text-editor';
 
 import '@vuepic/vue-datepicker/dist/main.css'
 
@@ -18,6 +17,7 @@ import MainFooter from './components/Footer.vue';
 
 import "light-icons/dist/light-icon.css";
 import "@/assets/scss/style.scss";
+import "@/views/renewCertificate/document-requests.scss";
 
 // setup fake backend
 // import { fakeBackend } from './helpers';
@@ -38,7 +38,6 @@ app.use(Quasar, {
 
 app.component('VueDatePicker', VueDatePicker);
 app.component('LvColorpicker', LvColorpicker);
-app.component('LvTextEditor', LvTextEditor);
 app.component('MainFooter', MainFooter);
 
 app.mount('#app');
