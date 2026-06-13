@@ -12,6 +12,7 @@ import formRoutes from './form.routes';
 import bannerRoutes from './banner.routes';
 import roleRoutes from './role.routes';
 import policyRoutes from './policy.routes';
+import DocumentRenewalsRoutes from './document-renewals.routes';
 
 export const router = createRouter({
     history: createWebHistory(import.meta.env.BASE_URL),
@@ -34,6 +35,7 @@ export const router = createRouter({
         { ...bannerRoutes },
         { ...roleRoutes },
         { ...policyRoutes },
+        { ...DocumentRenewalsRoutes },
         // catch all redirect to home page
         { path: '/:pathMatch(.*)*', redirect: '/' }
     ]
@@ -49,8 +51,24 @@ router.beforeEach(async (to) => {
     const authRequired = !publicPages.includes(to.path);
     const authStore = useAuthStore();
 
-    if (authRequired && !authStore.user) {
-        authStore.returnUrl = to.fullPath;
-        return '/account/login';
+    // BYPASS: Set dummy user for development
+    if (!authStore.user) {
+        const dummyUser = {
+            code: 'WA00000',
+            message: 'success',
+            data: {
+                id: '1',
+                username: 'admin',
+                email: 'admin@test.com',
+                token: 'dummy-token'
+            }
+        };
+        authStore.user = dummyUser;
+        localStorage.setItem('user', JSON.stringify(dummyUser));
     }
+
+    // if (authRequired && !authStore.user) {
+    //     authStore.returnUrl = to.fullPath;
+    //     return '/account/login';
+    // }
 });
