@@ -30,8 +30,14 @@ docker-compose down              # หยุด
 # ชี้ไป api-dev.smartseaman.com
 docker-compose --env-file .env.development up --build
 
+# ชี้ไป api-dev.smartseaman.com (background)
+docker-compose --env-file .env.development up -d --build
+
 # ชี้ไป api.smartseaman.com
 docker-compose --env-file .env.production up --build
+
+# ชี้ไป api.smartseaman.com (background)
+docker-compose --env-file .env.production up -d --build
 ```
 
 ### Build & Run (manual)
