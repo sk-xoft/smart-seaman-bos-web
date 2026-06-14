@@ -14,31 +14,22 @@ npm run lint      # ESLint with auto-fix
 
 ### Build & Run (docker-compose) — แนะนำ
 
-```bash
-docker-compose up --build        # build และ run
-docker-compose up -d --build     # run แบบ background
-docker-compose down              # หยุด
-```
-
-เปิดที่ `http://localhost:10000`
-
-### Run with Environment
-
 ระบุ env file เพื่อเลือก API target ตอน build:
 
 ```bash
 # ชี้ไป api-dev.smartseaman.com
-docker-compose --env-file .env.development up --build
-
-# ชี้ไป api-dev.smartseaman.com (background)
 docker-compose --env-file .env.development up -d --build
 
 # ชี้ไป api.smartseaman.com
-docker-compose --env-file .env.production up --build
-
-# ชี้ไป api.smartseaman.com (background)
 docker-compose --env-file .env.production up -d --build
+
+# หยุด
+docker-compose down
 ```
+
+> หมายเหตุ: server ใช้ docker-compose V1 (`docker-compose version 1.25.0`) — ต้องกำหนด `VITE_API_URL` ใน env file ให้ครบ เนื่องจาก V1 ไม่รองรับ nested variable interpolation (`${VAR:-${OTHER}}`)
+
+เปิดที่ `http://localhost:10000`
 
 ### Build & Run (manual)
 
