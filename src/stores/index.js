@@ -1,5 +1,6 @@
 export * from './alert.store';
 export * from './auth.store';
+export * from './document-renewals.store';
 export * from './menu-sidebar.store';
 export * from './courses.store';
 export * from './forms.store';

@@ -12,19 +12,19 @@
           <div class="search-grid">
             <div>
               <label class="form-label">Smart Seaman ID</label>
-              <input v-model="searchFilters.ssid" class="form-input" placeholder="Smart Seaman ID">
+              <input v-model="store.searchFilters.ssid" class="form-input" placeholder="Smart Seaman ID">
             </div>
             <div>
               <label class="form-label">ชื่อ</label>
-              <input v-model="searchFilters.name" class="form-input" placeholder="ชื่อ">
+              <input v-model="store.searchFilters.name" class="form-input" placeholder="ชื่อ">
             </div>
             <div>
               <label class="form-label">Request No.</label>
-              <input v-model="searchFilters.requestNo" class="form-input" placeholder="เช่น 2505001">
+              <input v-model="store.searchFilters.requestNo" class="form-input" placeholder="เช่น 2505001">
             </div>
           </div>
           <div class="search-actions">
-            <button class="btn btn-primary">
+            <button class="btn btn-primary" @click="store.search()">
               <i class="light-icon-search"></i> ค้นหา
             </button>
           </div>
@@ -39,8 +39,8 @@
               <button 
                 v-for="status in filterStatuses" 
                 :key="status.value"
-                @click="currentFilter = status.value"
-                :class="['tab-btn', { 'on': currentFilter === status.value }]"
+                @click="store.setFilter(status.value)"
+                :class="['tab-btn', { 'on': store.currentFilter === status.value }]"
               >
                 {{ status.label }} ({{ status.count }})
               </button>
@@ -88,20 +88,20 @@
             <div class="pagination-section">
               <div class="pagination-info">แสดง {{ paginationInfo.from }}–{{ paginationInfo.to }} จากทั้งหมด {{ paginationInfo.total }} รายการ</div>
               <div class="pagination-controls">
-                <button class="btn btn-ghost" :disabled="currentPage <= 1" @click="currentPage--">
+                <button class="btn btn-ghost" :disabled="store.currentPage <= 1" @click="store.setPage(store.currentPage - 1)">
                   <i class="light-icon-chevron-left"></i> ก่อนหน้า
                 </button>
                 <div class="page-numbers">
                   <button 
                     v-for="p in totalPages" 
                     :key="p"
-                    @click="currentPage = p"
-                    :class="['page-btn', { 'active': p === currentPage }]"
+                    @click="store.setPage(p)"
+                    :class="['page-btn', { 'active': p === store.currentPage }]"
                   >
                     {{ p }}
                   </button>
                 </div>
-                <button class="btn btn-ghost" :disabled="currentPage >= totalPages" @click="currentPage++">
+                <button class="btn btn-ghost" :disabled="store.currentPage >= store.totalPages" @click="store.setPage(store.currentPage + 1)">
                   ถัดไป <i class="light-icon-chevron-right"></i>
                 </button>
               </div>
@@ -175,7 +175,8 @@ import DeliveryTab from './DocumentRenewals/DeliveryTab.vue'
 import ModalDialog from './DocumentRenewals/ModalDialog.vue'
 import Title from './partial/_title.vue'
 import Breadcrumb from './partial/_breadcrumb.vue'
-import { REQUESTS, STATUS_COLORS, DOCS_DEFAULT, DOCS_RESUB } from '@/constants/documentRequests'
+import { STATUS_COLORS } from '@/constants/documentRequests'
+import { useDocumentRenewalsStore } from '@/stores'
 
 export default {
   name: 'DocumentRenewals',
@@ -189,20 +190,16 @@ export default {
     Title,
     Breadcrumb
   },
+  setup() {
+    const store = useDocumentRenewalsStore()
+    store.fetchList()
+    return { store }
+  },
   data() {
     return {
-      requests: REQUESTS,
       selectedRequest: null,
-      currentPage: 1,
-      pageSize: 20,
-      currentFilter: 'all',
       activeTab: 'docs',
       statusColors: STATUS_COLORS,
-      searchFilters: {
-        ssid: '',
-        name: '',
-        requestNo: ''
-      },
       showModal: false,
       modalConfig: {},
       docResults: {},
@@ -222,35 +219,26 @@ export default {
   },
   computed: {
     filterStatuses() {
+      const counts = this.store.statusCounts
       return [
-        { value: 'all', label: 'ทั้งหมด', count: this.requests.length },
-        { value: 'รอตรวจเอกสาร', label: 'รอตรวจเอกสาร', count: this.requests.filter(r => r.status === 'รอตรวจเอกสาร').length },
-        { value: 'รอผู้ยื่นแก้ไข', label: 'รอผู้ยื่นแก้ไข', count: this.requests.filter(r => r.status === 'รอผู้ยื่นแก้ไข').length },
-        { value: 'รอผลกรมเจ้าท่า', label: 'รอผลกรมเจ้าท่า', count: this.requests.filter(r => r.status === 'รอผลกรมเจ้าท่า').length },
-        { value: 'รอรับเอกสารจากกรม', label: 'รอรับเอกสารจากกรม', count: this.requests.filter(r => r.status === 'รอรับเอกสารจากกรม').length },
-        { value: 'กำลังจัดส่ง', label: 'กำลังจัดส่ง', count: this.requests.filter(r => r.status === 'กำลังจัดส่ง').length },
-        { value: 'จัดส่งสำเร็จ', label: 'จัดส่งสำเร็จ', count: this.requests.filter(r => r.status === 'จัดส่งสำเร็จ').length },
-        { value: 'ยกเลิก', label: 'ยกเลิก', count: this.requests.filter(r => r.status === 'ยกเลิก').length }
+        { value: 'all', label: 'ทั้งหมด', count: counts.all ?? 0 },
+        { value: 'รอตรวจเอกสาร', label: 'รอตรวจเอกสาร', count: counts['รอตรวจเอกสาร'] ?? 0 },
+        { value: 'รอผู้ยื่นแก้ไข', label: 'รอผู้ยื่นแก้ไข', count: counts['รอผู้ยื่นแก้ไข'] ?? 0 },
+        { value: 'รอผลกรมเจ้าท่า', label: 'รอผลกรมเจ้าท่า', count: counts['รอผลกรมเจ้าท่า'] ?? 0 },
+        { value: 'รอรับเอกสารจากกรม', label: 'รอรับเอกสารจากกรม', count: counts['รอรับเอกสารจากกรม'] ?? 0 },
+        { value: 'กำลังจัดส่ง', label: 'กำลังจัดส่ง', count: counts['กำลังจัดส่ง'] ?? 0 },
+        { value: 'จัดส่งสำเร็จ', label: 'จัดส่งสำเร็จ', count: counts['จัดส่งสำเร็จ'] ?? 0 },
+        { value: 'ยกเลิก', label: 'ยกเลิก', count: counts['ยกเลิก'] ?? 0 }
       ]
     },
-    filteredRequests() {
-      const filtered = this.currentFilter === 'all' 
-        ? this.requests 
-        : this.requests.filter(r => r.status === this.currentFilter)
-      return filtered
+    paginatedRequests() {
+      return this.store.requests
     },
     totalPages() {
-      return Math.max(1, Math.ceil(this.filteredRequests.length / this.pageSize))
-    },
-    paginatedRequests() {
-      const start = (this.currentPage - 1) * this.pageSize
-      return this.filteredRequests.slice(start, start + this.pageSize)
+      return this.store.totalPages
     },
     paginationInfo() {
-      const total = this.filteredRequests.length
-      const from = total === 0 ? 0 : (this.currentPage - 1) * this.pageSize + 1
-      const to = Math.min(this.currentPage * this.pageSize, total)
-      return { from, to, total }
+      return this.store.paginationInfo
     },
     toastIconClass() {
       return this.toast.type === 'error' ? 'light-icon-alert-circle' : 'light-icon-circle-check'
@@ -291,18 +279,22 @@ export default {
       this.modalConfig = { ...config[action], action }
       this.showModal = true
     },
-    handleModalConfirm(action) {
-      if (action === 'cancel') {
-        this.selectedRequest.status = 'ยกเลิก'
-        this.selectedRequest.resubmit = false
-        this.showToast('ยกเลิกคำขอเรียบร้อยแล้ว', 'error')
-      } else if (action === 'sendback') {
-        this.selectedRequest.status = 'รอผู้ยื่นแก้ไข'
-        this.selectedRequest.resubmit = false
-        this.showToast('ส่งกลับให้ผู้ยื่นแก้ไขแล้ว', 'warning')
-      } else if (action === 'submit') {
-        this.selectedRequest.status = 'รอผลกรมเจ้าท่า'
-        this.showToast('บันทึกยื่นกรมเจ้าท่าแล้ว')
+    async handleModalConfirm(action) {
+      const actionMap = {
+        cancel:   { status: 'ยกเลิก',           resubmit: false,     toast: ['ยกเลิกคำขอเรียบร้อยแล้ว', 'error'] },
+        sendback: { status: 'รอผู้ยื่นแก้ไข',   resubmit: false,     toast: ['ส่งกลับให้ผู้ยื่นแก้ไขแล้ว', 'warning'] },
+        submit:   { status: 'รอผลกรมเจ้าท่า',  resubmit: undefined,  toast: ['บันทึกยื่นกรมเจ้าท่าแล้ว', 'success'] }
+      }
+      const cfg = actionMap[action]
+      const requestNo = this.selectedRequest.no
+      try {
+        await this.store.updateStatus(requestNo, action)
+        this.selectedRequest.status = cfg.status
+        if (cfg.resubmit !== undefined) this.selectedRequest.resubmit = cfg.resubmit
+        this.showToast(...cfg.toast)
+        this.store.fetchList()
+      } catch {
+        this.showToast('เกิดข้อผิดพลาด กรุณาลองใหม่', 'error')
       }
       this.showModal = false
     },

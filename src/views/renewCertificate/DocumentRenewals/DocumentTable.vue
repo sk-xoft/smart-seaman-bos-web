@@ -111,7 +111,13 @@
 
         <div class="field-block">
           <div class="field-label">อัปโหลดไฟล์ใหม่ <span class="required-star">*</span></div>
-          <label class="upload-box" :class="{ filled: !!selectedFileName }">
+          <label 
+            class="upload-box" 
+            :class="{ filled: !!selectedFileName, dragover: isDragOver }"
+            @dragover.prevent="isDragOver = true"
+            @dragleave.prevent="isDragOver = false"
+            @drop.prevent="handleDrop"
+          >
             <i class="light-icon-upload"></i>
             <span>{{ selectedFileName || 'เลือกไฟล์ หรือลากมาวางที่นี่ (PDF, JPG, PNG)' }}</span>
             <input type="file" accept=".pdf,.jpg,.jpeg,.png" @change="handleFileSelected">
@@ -153,7 +159,8 @@ export default {
       saveSuccess: false,
       showEditModal: false,
       editingDocName: '',
-      selectedFileName: ''
+      selectedFileName: '',
+      isDragOver: false
     }
   },
   watch: {
@@ -249,6 +256,18 @@ export default {
     handleFileSelected(event) {
       const [file] = event.target.files || []
       this.selectedFileName = file ? file.name : ''
+      this.isDragOver = false
+    },
+    handleDrop(event) {
+      this.isDragOver = false
+      const [file] = event.dataTransfer.files || []
+      if (!file) return
+      const allowed = ['application/pdf', 'image/jpeg', 'image/jpg', 'image/png']
+      if (!allowed.includes(file.type)) {
+        this.showToast('รองรับเฉพาะไฟล์ PDF, JPG, PNG', true)
+        return
+      }
+      this.selectedFileName = file.name
     },
     confirmUpload() {
       if (!this.selectedFileName) return
@@ -597,6 +616,11 @@ export default {
     border-style: solid;
     border-color: #f97316;
     color: #e2e8f0;
+  }
+
+  &.dragover {
+    border-color: #f97316;
+    background: #111c2b;
   }
 }
 

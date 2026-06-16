@@ -9,6 +9,9 @@ COPY . .
 
 ARG VITE_BASE_URL_API
 ARG VITE_API_URL
+ARG VITE_USE_MOCK
+
+RUN printf "VITE_BASE_URL_API=%s\nVITE_API_URL=%s\nVITE_USE_MOCK=%s\n" "$VITE_BASE_URL_API" "$VITE_API_URL" "$VITE_USE_MOCK" > .env.production
 
 RUN npx vite build --mode production
 
