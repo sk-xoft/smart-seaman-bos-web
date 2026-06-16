@@ -1,22 +1,22 @@
-#base image
-FROM node:14.21.2
+# Stage 1: Build
+FROM node:18-alpine AS builder
 
 WORKDIR /app
-COPY package.json .
+COPY package.json package-lock.json ./
+RUN npm ci
 
-RUN apt-get update
-
-RUN mkdir -p /apps/web_admin/logs/
-ENV TZ=Asia/Bangkok
-RUN ln -snf /usr/share/zoneinfo/$TZ /etc/localtime && echo $TZ > /etc/timezone
-
-RUN npm install
-
-# If you are building your code for production
-# RUN npm ci --only=production
-
-# Bundle app source
 COPY . .
 
-EXPOSE 10000
-CMD [ "npm", "run", "serve" ]
+ARG VITE_BASE_URL_API
+ARG VITE_API_URL
+
+RUN npx vite build --mode production
+
+# Stage 2: Serve with nginx
+FROM nginx:alpine
+
+COPY --from=builder /app/dist /usr/share/nginx/html
+COPY nginx.conf /etc/nginx/conf.d/default.conf
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
