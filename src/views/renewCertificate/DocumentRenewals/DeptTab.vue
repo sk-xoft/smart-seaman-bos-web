@@ -18,16 +18,16 @@
             <div class="panel-title">ข้อมูลการยื่นกรมเจ้าท่า</div>
             <div class="info-rows">
               <div class="info-row">
-                <span class="info-label">วันที่ยื่น Google Form</span>
-                <span class="info-value">03/05/2026 09:30:00</span>
+                <span class="info-label">วันที่ยื่น</span>
+                <span class="info-value">{{ deptSubmission.submittedAt }}</span>
               </div>
               <div class="info-row">
                 <span class="info-label">ผู้ดำเนินการ</span>
-                <span class="info-value">superadmin02</span>
+                <span class="info-value">{{ deptSubmission.operatorName }}</span>
               </div>
               <div class="info-row">
                 <span class="info-label">เบอร์ติดต่อผู้ดำเนินการ</span>
-                <span class="info-value">081-234-5678</span>
+                <span class="info-value">{{ deptSubmission.operatorPhone }}</span>
               </div>
             </div>
           </div>
@@ -37,7 +37,7 @@
             <div class="form-group">
               <label class="form-label">วันที่สามารถรับเอกสารได้ตั้งแต่ <span class="required">*</span></label>
               <div class="date-wrapper">
-                <input type="date" class="date-input">
+                <input v-model="availablePickupDate" type="date" class="date-input">
               </div>
             </div>
             <button class="btn btn-primary" @click="saveDeptResult">
@@ -61,24 +61,24 @@
             <div class="panel-title">ข้อมูลจากกรมเจ้าท่า</div>
             <div class="info-rows">
               <div class="info-row">
-                <span class="info-label">วันที่ยื่น Google Form</span>
-                <span class="info-value">03/05/2026 09:30:00</span>
+                <span class="info-label">วันที่ยื่น</span>
+                <span class="info-value">{{ deptSubmission.submittedAt }}</span>
               </div>
               <div class="info-row">
                 <span class="info-label">ผู้ดำเนินการ</span>
-                <span class="info-value">superadmin02</span>
+                <span class="info-value">{{ deptSubmission.operatorName }}</span>
               </div>
               <div class="info-row">
                 <span class="info-label">เบอร์ติดต่อผู้ดำเนินการ</span>
-                <span class="info-value">081-234-5678</span>
+                <span class="info-value">{{ deptSubmission.operatorPhone }}</span>
               </div>
               <div class="info-row">
                 <span class="info-label">วันที่รับเอกสารได้ตั้งแต่</span>
-                <span class="info-value">10/05/2026</span>
+                <span class="info-value">{{ deptResult.availablePickupDate }}</span>
               </div>
               <div class="info-row" v-if="request.status !== 'รอรับเอกสารจากกรม'">
                 <span class="info-label">วันที่รับเอกสารจริง</span>
-                <span class="info-value">11/05/2026</span>
+                <span class="info-value">{{ deptResult.receivedDate }}</span>
               </div>
             </div>
           </div>
@@ -90,8 +90,8 @@
               <div class="form-group">
                 <label class="form-label">วันที่สามารถรับเอกสารได้ตั้งแต่ <span class="subtitle">(แก้ไขได้)</span></label>
                 <div style="display: flex; gap: 10px; align-items: center">
-                  <input type="date" class="date-input" value="10/05/2026">
-                  <button class="btn btn-ghost">
+                  <input v-model="availablePickupDate" type="date" class="date-input">
+                  <button class="btn btn-ghost" @click="savePickupDateChange">
                     <i class="ti ti-device-floppy"></i> บันทึกการเปลี่ยนแปลง
                   </button>
                 </div>
@@ -100,7 +100,7 @@
               <div style="border-top: 1px solid #1e293b; padding-top: 14px">
                 <div class="form-group">
                   <label class="form-label">วันที่รับเอกสาร <span class="required">*</span></label>
-                  <input type="date" class="date-input">
+                  <input v-model="receivedDate" type="date" class="date-input">
                 </div>
                 <button class="btn btn-primary" @click="saveReceiveDoc">
                   <i class="ti ti-check"></i> บันทึกรับเอกสาร
@@ -113,13 +113,13 @@
 
                 <div class="form-group">
                   <label class="form-label">Tracking No. <span class="required">*</span></label>
-                  <input type="text" class="form-input" placeholder="เช่น EF123456789TH">
+                  <input v-model="trackingNo" type="text" class="form-input" placeholder="เช่น EF123456789TH">
                 </div>
 
                 <div style="display: flex; align-items: flex-end; gap: 12px">
                   <div style="flex: 1">
                     <label class="form-label">วันที่จัดส่ง <span class="required">*</span></label>
-                    <input type="date" class="date-input">
+                    <input v-model="shippedDate" type="date" class="date-input">
                   </div>
                   <button class="btn btn-primary" @click="saveDeliveryInfo">
                     <i class="ti ti-send"></i> บันทึกข้อมูลจัดส่ง
@@ -133,19 +133,19 @@
               <div class="info-grid">
                 <div>
                   <div class="info-label">Tracking No.</div>
-                  <div class="info-value">EF123456789TH</div>
+                  <div class="info-value">{{ deliveryInfo.trackingNo }}</div>
                 </div>
                 <div>
                   <div class="info-label">วันที่จัดส่ง</div>
-                  <div class="info-value">12/05/2026</div>
+                  <div class="info-value">{{ deliveryInfo.shippedDate }}</div>
                 </div>
                 <div>
                   <div class="info-label">วันที่/เวลาบันทึก</div>
-                  <div class="info-value">12/05/2026 15:00:00</div>
+                  <div class="info-value">{{ deliveryInfo.recordedAt }}</div>
                 </div>
                 <div>
                   <div class="info-label">ผู้ดำเนินการ</div>
-                  <div class="info-value">superadmin02</div>
+                  <div class="info-value">{{ deliveryInfo.operatorName }}</div>
                 </div>
               </div>
             </div>
@@ -165,15 +165,92 @@ export default {
       required: true
     }
   },
+  emits: ['save-dept-result', 'save-pickup-change', 'save-receive-doc', 'save-delivery-info'],
+  data() {
+    return {
+      availablePickupDate: '',
+      receivedDate: '',
+      trackingNo: '',
+      shippedDate: ''
+    }
+  },
+  computed: {
+    deptSubmission() {
+      return this.request.deptSubmission ?? {
+        submittedAt: '-',
+        operatorName: '-',
+        operatorPhone: '-',
+      }
+    },
+    deptResult() {
+      return this.request.deptResult ?? {
+        availablePickupDate: '-',
+        availablePickupDateValue: '',
+        receivedDate: '-',
+        receivedDateValue: '',
+      }
+    },
+    deliveryInfo() {
+      return this.request.deliveryInfo ?? {
+        trackingNo: '-',
+        shippedDate: '-',
+        shippedDateValue: '',
+        recordedAt: '-',
+        operatorName: '-',
+      }
+    }
+  },
+  watch: {
+    request: {
+      immediate: true,
+      deep: true,
+      handler() {
+        this.availablePickupDate = this.request?.deptResult?.availablePickupDateValue ?? ''
+        this.receivedDate = this.request?.deptResult?.receivedDateValue ?? ''
+        this.trackingNo = this.request?.deliveryInfo?.trackingNo && this.request?.deliveryInfo?.trackingNo !== '-'
+          ? this.request.deliveryInfo.trackingNo
+          : ''
+        this.shippedDate = this.request?.deliveryInfo?.shippedDateValue ?? ''
+      }
+    }
+  },
   methods: {
     saveDeptResult() {
-      console.log('Saving dept result')
+      if (!this.availablePickupDate) {
+        return
+      }
+
+      this.$emit('save-dept-result', {
+        availablePickupDate: this.availablePickupDate
+      })
+    },
+    savePickupDateChange() {
+      if (!this.availablePickupDate) {
+        return
+      }
+
+      this.$emit('save-pickup-change', {
+        availablePickupDate: this.availablePickupDate
+      })
     },
     saveReceiveDoc() {
-      console.log('Saving receive doc')
+      if (!this.receivedDate) {
+        return
+      }
+
+      this.$emit('save-receive-doc', {
+        receivedDate: this.receivedDate
+      })
     },
     saveDeliveryInfo() {
-      console.log('Saving delivery info')
+      if (!this.trackingNo || !this.shippedDate) {
+        return
+      }
+
+      this.$emit('save-delivery-info', {
+        trackingNo: this.trackingNo,
+        shippedDate: this.shippedDate
+      })
     }
   }
 }

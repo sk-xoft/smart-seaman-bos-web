@@ -21,6 +21,7 @@
         "daisyui": "^2.46.0",
         "emailjs-com": "^3.2.0",
         "jsonwebtoken": "^9.0.0",
+        "jszip": "^3.10.1",
         "light-icons": "^1.0.10",
         "lightvue": "^1.5.1",
         "mitt": "^3.0.0",

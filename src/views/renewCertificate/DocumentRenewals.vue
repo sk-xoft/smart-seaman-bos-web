@@ -66,7 +66,7 @@
                   v-for="req in paginatedRequests" 
                   :key="req.no"
                   class="cursor-pointer"
-                  @click="selectedRequest = req"
+                  @click="openDetail(req)"
                 >
                   <td class="whitespace-normal w-14 p-3">{{ req.no }}</td>
                   <td class="whitespace-normal w-40 p-3">{{ req.ssid }}</td>
@@ -145,7 +145,7 @@
           </div>
 
           <!-- Tab Contents -->
-          <DocumentsTab v-if="activeTab === 'docs'" :request="selectedRequest" @cancel="showConfirmModal('cancel')" @send-back="showConfirmModal('sendback')" @submit="showConfirmModal('submit')" />
+          <DocumentsTab v-if="activeTab === 'docs'" :request="selectedRequest" @cancel="showConfirmModal('cancel')" @send-back="showConfirmModal('sendback')" @submit="showConfirmModal('submit')" @documents-saved="handleDocumentsSaved" />
           <DeptTab v-if="activeTab === 'dept'" :request="selectedRequest" />
           <DeliveryTab v-if="activeTab === 'delivery'" :request="selectedRequest" />
         </div>
@@ -245,6 +245,20 @@ export default {
     }
   },
   methods: {
+    openDetail(req) {
+      if (!req.no || req.no === '-') return
+      const defaultDeptStatuses = ['รอผลกรมเจ้าท่า', 'รอรับเอกสารจากกรม']
+      const defaultDeliveryStatuses = ['กำลังจัดส่ง', 'จัดส่งสำเร็จ']
+      this.$router.push({
+        name: 'document-renewals-detail',
+        params: { requestNo: req.no },
+        query: defaultDeliveryStatuses.includes(req.status)
+          ? { tab: 'delivery' }
+          : defaultDeptStatuses.includes(req.status)
+            ? { tab: 'dept' }
+            : {}
+      })
+    },
     goBack() {
       this.selectedRequest = null
       setTimeout(() => {
@@ -297,6 +311,14 @@ export default {
         this.showToast('เกิดข้อผิดพลาด กรุณาลองใหม่', 'error')
       }
       this.showModal = false
+    },
+    async handleDocumentsSaved(results) {
+      if (!this.selectedRequest?.no) return
+
+      await this.store.saveInspectionResults(this.selectedRequest.no, results)
+      this.selectedRequest.attachmentResults = { ...(this.selectedRequest.attachmentResults || {}), ...results }
+      this.showToast('บันทึกผลตรวจเรียบร้อยแล้ว', 'success')
+      this.store.fetchList()
     },
     showToast(message, type = 'success') {
       if (this.toastTimer) {

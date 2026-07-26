@@ -16,7 +16,7 @@ export default defineConfig({
         })
     ],
     server: {
-        port: 8080,
+        port: 9090,
         proxy:{
             "/v1": {
                 target: 'https://api-dev.smartseaman.com',

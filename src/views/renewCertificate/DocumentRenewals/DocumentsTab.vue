@@ -1,6 +1,6 @@
 <template>
   <div class="tab-content">
-    <div v-if="request.status === 'รอตรวจเอกสาร'" class="edit-mode">
+    <div class="edit-mode">
       <div v-if="request.resubmit" class="resubmit-badge">
         <i class="light-icon-refresh"></i> ผู้ยื่นแก้ไขและส่งกลับมาแล้ว
         <span class="date">อัปเดตเมื่อ {{ request.date }}</span>
@@ -15,12 +15,16 @@
 
       <DocumentTable
         :documents="documents"
-        :editable="true"
+        :requestNo="request.no"
+        :editable="isEditable"
+        :uploadable="isUploadable"
         :initialResults="docResults"
         @save="saveDocuments"
         @changed="onDocumentsChanged"
+        @upload-file="uploadFile"
       />
       <ActionButtons
+        v-if="isInspectionStep"
         :docsSaved="docsSaved"
         :allAnswered="allAnswered"
         :allPass="allPass"
@@ -30,18 +34,11 @@
         @submit="$emit('submit')"
       />
     </div>
-
-    <div v-else class="view-mode">
-      <div class="view-only-badge">
-        <i class="light-icon-lock"></i>
-        <span>ผ่านการตรวจแล้ว — view only</span>
-      </div>
-      <DocumentTable :documents="documents" :editable="false" />
-    </div>
   </div>
 </template>
 
 <script>
+import JSZip from 'jszip'
 import DocumentTable from './DocumentTable.vue'
 import ActionButtons from './ActionButtons.vue'
 import { DOCS_DEFAULT, DOCS_RESUB } from '@/constants/documentRequests'
@@ -55,15 +52,38 @@ export default {
       required: true
     }
   },
-  emits: ['cancel', 'send-back', 'submit', 'documents-saved'],
+  emits: ['cancel', 'send-back', 'submit', 'documents-saved', 'upload-file'],
   data() {
     return {
       docResults: {},
-      docsSaved: false
+      docsSaved: false,
+      isDownloadingAll: false,
     }
   },
   computed: {
+    isInspectionStep() {
+      const currentStep = this.request?.stepper?.currentStep
+      if (currentStep === 1) {
+        return true
+      }
+
+      // Fallback for responses that do not include stepper yet.
+      return ['รอตรวจเอกสาร', 'รอผู้ยื่นแก้ไข'].includes(this.request?.status)
+    },
+    isEditable() {
+      return this.isInspectionStep
+    },
+    isUploadable() {
+      if (this.request?.stepper?.isCancelled) {
+        return false
+      }
+
+      return this.request?.status !== 'ยกเลิก'
+    },
     documents() {
+      if (Array.isArray(this.request.documents) && this.request.documents.length) {
+        return this.request.documents
+      }
       return this.request.resubmit ? DOCS_RESUB : DOCS_DEFAULT
     },
     allAnswered() {
@@ -80,24 +100,103 @@ export default {
     this.initializeDocResults()
   },
   methods: {
-    downloadAllFiles() {
-      const downloadableDocs = this.documents.filter(d => d.f)
-      if (!downloadableDocs.length) return
+    async downloadAllFiles() {
+      if (this.isDownloadingAll) return
 
-      const content = downloadableDocs.map((d, index) => `${index + 1}. ${d.n}`).join('\n')
-      const blob = new Blob([`Documents in package:\n${content}\n`], { type: 'application/zip' })
-      const url = URL.createObjectURL(blob)
-      const link = document.createElement('a')
-      link.href = url
-      link.download = `documents-${this.request.no || 'bundle'}.zip`
-      document.body.appendChild(link)
-      link.click()
-      link.remove()
-      URL.revokeObjectURL(url)
+      const downloadableDocs = this.documents.filter(d => d.f)
+      if (!downloadableDocs.length) {
+        return
+      }
+
+      const baseUrl = import.meta.env.VITE_BASE_URL_API
+      const requestNo = this.request?.no
+      if (!baseUrl || !requestNo) {
+        return
+      }
+
+      this.isDownloadingAll = true
+
+      try {
+        const zip = new JSZip()
+
+        for (const doc of downloadableDocs) {
+          const sortOrder = Number(doc.id)
+          if (!sortOrder) {
+            continue
+          }
+
+          const fileUrl = `${baseUrl}/v1/document-request-attachment-file?requestNo=${encodeURIComponent(requestNo)}&sortOrder=${encodeURIComponent(sortOrder)}&download=true`
+          const response = await fetch(fileUrl)
+
+          if (!response.ok) {
+            throw new Error(`Download failed with status ${response.status}`)
+          }
+
+          const blob = await response.blob()
+          const disposition = response.headers.get('content-disposition') || ''
+          const serverFileName = this.extractFilenameFromDisposition(disposition)
+          const fallback = `${this.sanitizeFilename(doc.n || `document_${sortOrder}`)}${this.getExtensionByContentType(blob.type)}`
+          const fileName = serverFileName || fallback
+
+          zip.file(fileName, blob)
+        }
+
+        const zipBlob = await zip.generateAsync({ type: 'blob' })
+        const zipUrl = URL.createObjectURL(zipBlob)
+        const link = document.createElement('a')
+        link.href = zipUrl
+        link.download = `documents-${requestNo}.zip`
+        document.body.appendChild(link)
+        link.click()
+        link.remove()
+        URL.revokeObjectURL(zipUrl)
+      } catch (error) {
+        console.error(error)
+      } finally {
+        this.isDownloadingAll = false
+      }
+    },
+    sanitizeFilename(filename) {
+      return filename
+        .replace(/[\\/:*?"<>|]/g, '_')
+        .replace(/\s+/g, '_')
+        .trim()
+    },
+    extractFilenameFromDisposition(disposition) {
+      if (!disposition) {
+        return ''
+      }
+
+      const utf8Match = disposition.match(/filename\*=UTF-8''([^;]+)/i)
+      if (utf8Match && utf8Match[1]) {
+        try {
+          return decodeURIComponent(utf8Match[1].trim())
+        } catch {
+          return utf8Match[1].trim()
+        }
+      }
+
+      const asciiMatch = disposition.match(/filename="?([^";]+)"?/i)
+      return asciiMatch && asciiMatch[1] ? asciiMatch[1].trim() : ''
+    },
+    getExtensionByContentType(contentType) {
+      const normalized = (contentType || '').toLowerCase()
+      if (normalized.includes('pdf')) return '.pdf'
+      if (normalized.includes('png')) return '.png'
+      if (normalized.includes('jpeg') || normalized.includes('jpg')) return '.jpg'
+      return ''
     },
     initializeDocResults() {
       this.docsSaved = false
       const docs = this.documents
+
+      if (this.request.attachmentResults) {
+        docs.forEach(d => {
+          this.docResults[d.id] = this.request.attachmentResults[d.id] ?? { result: '', note: '' }
+        })
+        return
+      }
+
       docs.forEach(d => {
         if (this.request.resubmit) {
           this.docResults[d.id] = d.id <= 2 ? { result: 'pass', note: '' } : { result: '', note: '' }
@@ -116,6 +215,9 @@ export default {
       this.docResults = results
       this.docsSaved = true
       this.$emit('documents-saved', results)
+    },
+    uploadFile(payload) {
+      this.$emit('upload-file', payload)
     }
   }
 }

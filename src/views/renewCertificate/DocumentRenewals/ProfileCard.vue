@@ -14,23 +14,23 @@
       <div class="profile-info">
         <div class="info-row">
           <span class="info-label">Date of Birth</span>
-          <span class="info-value">25-Jan-1988</span>
+          <span class="info-value">{{ request.dob || '-' }}</span>
         </div>
         <div class="info-row">
           <span class="info-label">Age</span>
-          <span class="info-value">38</span>
+          <span class="info-value">{{ ageText }}</span>
         </div>
         <div class="info-row">
           <span class="info-label">Mobile Phone</span>
-          <span class="info-value">082-464-2893</span>
+          <span class="info-value">{{ request.mobile || '-' }}</span>
         </div>
         <div class="info-row">
           <span class="info-label">Email</span>
-          <span class="info-value">somchai.jai@gmail.com</span>
+          <span class="info-value">{{ request.email || '-' }}</span>
         </div>
         <div class="info-row">
           <span class="info-label">Company</span>
-          <span class="info-value">OCEAN STAR</span>
+          <span class="info-value">{{ request.company || '-' }}</span>
         </div>
         <div class="info-row">
           <span class="info-label">Smart Seaman ID</span>
@@ -48,10 +48,7 @@
           </button>
         </div>
         <div class="address-text">
-          33/8 หมู่ที่ 6<br>
-          ตำบลคลองตะเกรา<br>
-          อำเภอท่าตะเกียบ<br>
-          จังหวัดฉะเชิงเทรา 24160
+          {{ addressText }}
         </div>
       </div>
     </div>
@@ -67,14 +64,33 @@ export default {
       required: true
     }
   },
+  computed: {
+    ageText() {
+      if (!this.request.dob || this.request.dob === '-') return '-'
+      const dob = new Date(this.request.dob)
+      if (Number.isNaN(dob.getTime())) return '-'
+
+      const now = new Date()
+      let age = now.getFullYear() - dob.getFullYear()
+      const monthDiff = now.getMonth() - dob.getMonth()
+      if (monthDiff < 0 || (monthDiff === 0 && now.getDate() < dob.getDate())) {
+        age -= 1
+      }
+
+      return age >= 0 ? String(age) : '-'
+    },
+    addressText() {
+      return this.request.deliveryAddressText || '-'
+    }
+  },
   methods: {
     getInitials(firstName, lastName) {
-      const first = firstName.charAt(0) || ''
-      const last = lastName.charAt(0) || ''
+      const first = (firstName || '').charAt(0)
+      const last = (lastName || '').charAt(0)
       return (first + last).toUpperCase()
     },
     copyAddress() {
-      const text = '33/8 หมู่ที่ 6\nตำบลคลองตะเกรา\nอำเภอท่าตะเกียบ\nจังหวัดฉะเชิงเทรา 24160'
+      const text = this.addressText
       navigator.clipboard.writeText(text)
       // Show toast notification
       this.$emit('copied')

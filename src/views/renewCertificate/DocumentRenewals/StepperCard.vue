@@ -29,6 +29,17 @@ export default {
   },
   computed: {
     currentStepConfig() {
+      if (this.request.stepper) {
+        if (this.request.stepper.isCancelled) {
+          return { done: [], active: 1 }
+        }
+
+        return {
+          done: this.request.stepper.completedSteps ?? [],
+          active: this.request.stepper.currentStep ?? 1
+        }
+      }
+
       return this.stepsConfig[this.status] || { done: [], active: 1 }
     }
   },
@@ -37,7 +48,8 @@ export default {
       const { done, active } = this.currentStepConfig
       return h('div', { class: 'stepper-container' }, 
         STEPPER_STEPS.map((step, idx) => {
-          const isDone = done.includes(step.n)
+          const isFinalStep = step.n === STEPPER_STEPS.length
+          const isDone = done.includes(step.n) || (isFinalStep && active === STEPPER_STEPS.length)
           const isActive = step.n === active
           const circleClass = isDone ? 'sc-done' : isActive ? 'sc-active' : 'sc-pending'
           const labelClass = isDone ? 'sl-done' : isActive ? 'sl-active' : ''

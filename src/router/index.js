@@ -58,7 +58,7 @@ router.beforeEach(async (to) => {
             message: 'success',
             data: {
                 id: '1',
-                username: 'admin',
+                username: 'superadmin',
                 email: 'admin@test.com',
                 token: 'dummy-token'
             }

@@ -13,23 +13,27 @@
             <div class="info-row">
               <span class="info-label">Tracking No.</span>
               <span class="info-value tracking">
-                EF123456789TH
-                <button class="btn-copy" @click="copyTracking">
+                {{ deliveryInfo.trackingNo }}
+                <button v-if="deliveryInfo.trackingNo !== '-'" class="btn-copy" @click="copyTracking">
                   <i class="light-icon-copy"></i> คัดลอก
                 </button>
               </span>
             </div>
             <div class="info-row">
               <span class="info-label">วันที่จัดส่ง</span>
-              <span class="info-value">12/05/2026</span>
+              <span class="info-value">{{ deliveryInfo.shippedDate }}</span>
             </div>
             <div class="info-row">
               <span class="info-label">วันที่/เวลาบันทึก</span>
-              <span class="info-value">12/05/2026 15:00:00</span>
+              <span class="info-value">{{ deliveryInfo.recordedAt }}</span>
             </div>
             <div class="info-row">
               <span class="info-label">ผู้ดำเนินการ</span>
-              <span class="info-value">superadmin02</span>
+              <span class="info-value">{{ deliveryInfo.operatorName }}</span>
+            </div>
+            <div class="info-row">
+              <span class="info-label">เบอร์ติดต่อผู้ดำเนินการ</span>
+              <span class="info-value">{{ deliveryInfo.operatorPhone }}</span>
             </div>
           </div>
         </div>
@@ -73,6 +77,19 @@ export default {
     }
   },
   computed: {
+    deliveryInfo() {
+      const delivery = this.request.deliveryInfo ?? {}
+      const deptResult = this.request.deptResult ?? {}
+
+      return {
+        trackingNo: delivery.trackingNo ?? '-',
+        shippedDate: delivery.shippedDate ?? '-',
+        recordedAt: delivery.recordedAt ?? '-',
+        operatorName: delivery.operatorName ?? '-',
+        operatorPhone: delivery.operatorPhone ?? '-',
+        receivedDate: deptResult.receivedDate ?? '-',
+      }
+    },
     deliveryTracks() {
       return this.request.status === 'จัดส่งสำเร็จ' 
         ? DELIVERY_TRACKS_DELIVERED 
@@ -81,7 +98,10 @@ export default {
   },
   methods: {
     copyTracking() {
-      const text = 'EF123456789TH'
+      const text = this.deliveryInfo.trackingNo
+      if (!text || text === '-') {
+        return
+      }
       navigator.clipboard.writeText(text).then(() => {
         // Show toast
         console.log('Copied to clipboard')

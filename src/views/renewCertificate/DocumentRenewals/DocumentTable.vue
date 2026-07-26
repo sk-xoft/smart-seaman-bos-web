@@ -60,16 +60,16 @@
             <span v-else class="note-text">{{ docResults[doc.id].note || '—' }}</span>
           </td>
           <td style="text-align: center">
-            <button class="btn-icon" @click="viewFile(doc.n)">
+            <button class="btn-icon" :disabled="!doc.f" @click="viewFile(doc)">
               <i class="light-icon-eye"></i>
             </button>
           </td>
           <td style="text-align: center">
             <div class="action-buttons">
-              <button class="btn-icon" :disabled="!doc.f" @click="downloadFile(doc.n)">
+              <button class="btn-icon" :disabled="!doc.f" @click="downloadFile(doc)">
                 <i class="light-icon-download"></i>
               </button>
-              <button v-if="editable" class="btn-icon" @click="editFile(doc.n)">
+              <button v-if="uploadable" class="btn-icon" @click="editFile(doc)">
                 <i class="light-icon-edit"></i>
               </button>
             </div>
@@ -102,8 +102,8 @@
           <div class="field-label">ไฟล์ปัจจุบัน</div>
           <div class="file-box">
             <i class="light-icon-file-type-pdf"></i>
-            <span>{{ normalizedDocFilename }}_original.pdf</span>
-            <button class="link-btn" @click="viewFile(editingDocName)">
+            <span>{{ editingDocFilename }}</span>
+            <button class="link-btn" :disabled="!editingDocId" @click="viewFile({ id: editingDocId, n: editingDocName, p: editingDocPath })">
               <i class="light-icon-eye"></i> ดูไฟล์
             </button>
           </div>
@@ -143,7 +143,15 @@ export default {
       type: Array,
       required: true
     },
+    requestNo: {
+      type: String,
+      default: ''
+    },
     editable: {
+      type: Boolean,
+      default: false
+    },
+    uploadable: {
       type: Boolean,
       default: false
     },
@@ -152,14 +160,17 @@ export default {
       default: () => ({})
     }
   },
-  emits: ['save', 'changed'],
+  emits: ['save', 'changed', 'upload-file'],
   data() {
     return {
       docResults: {},
       saveSuccess: false,
       showEditModal: false,
       editingDocName: '',
+      editingDocId: null,
+      editingDocPath: '',
       selectedFileName: '',
+      selectedFile: null,
       isDragOver: false
     }
   },
@@ -222,40 +233,52 @@ export default {
         setTimeout(() => toast.remove(), 300)
       }, 2200)
     },
-    viewFile(docName) {
-      const html = `<!DOCTYPE html><html><head><meta charset="UTF-8"><title>${docName}</title>
-      <style>*{margin:0;padding:0;box-sizing:border-box}body{background:#404040;display:flex;flex-direction:column;height:100vh;font-family:sans-serif}
-      .toolbar{background:#323639;height:48px;display:flex;align-items:center;padding:0 16px;gap:16px;color:#9aa0a6;font-size:13px}
-      .toolbar span{color:#e8eaed;font-weight:500}.viewer{flex:1;display:flex;align-items:center;justify-content:center;padding:24px}
-      .page{background:#fff;width:794px;min-height:1123px;box-shadow:0 4px 24px rgba(0,0,0,.5);display:flex;align-items:center;justify-content:center}</style>
-      </head><body><div class="toolbar"><span>${docName}.pdf</span><span style="margin-left:auto;color:#9aa0a6">1 / 1</span></div>
-      <div class="viewer"><div class="page"><div style="text-align:center;color:#6b7280"><div style="font-size:18px;font-weight:600;color:#111827;margin-bottom:8px">${docName}</div><div style="font-size:13px">ไฟล์เอกสารจริงจะแสดงที่นี่</div></div></div></div></body></html>`
-      const blob = new Blob([html], { type: 'text/html' })
-      window.open(URL.createObjectURL(blob), '_blank')
+    viewFile(doc) {
+      const fileUrl = this.resolveFileUrl(doc, false)
+      if (!fileUrl) {
+        this.showToast('ไม่พบไฟล์ที่อัปโหลดสำหรับเอกสารนี้', true)
+        return
+      }
+
+      window.open(fileUrl, '_blank', 'noopener')
     },
-    downloadFile(docName) {
-      const content = `Document: ${docName}\nGenerated at: ${new Date().toISOString()}\n`
-      const blob = new Blob([content], { type: 'application/pdf' })
-      const url = URL.createObjectURL(blob)
+    downloadFile(doc) {
+      const fileUrl = this.resolveFileUrl(doc, true)
+      if (!fileUrl) {
+        this.showToast('ไม่พบไฟล์ที่อัปโหลดสำหรับเอกสารนี้', true)
+        return
+      }
+
+      const fallbackName = `${(doc?.n || 'document').replace(/\s+/g, '_')}.pdf`
+      const fileName = this.extractFilename(doc?.p) || fallbackName
       const link = document.createElement('a')
-      link.href = url
-      link.download = `${docName.replace(/\s+/g, '_')}.pdf`
+      link.href = fileUrl
+      link.download = fileName
+      link.target = '_blank'
+      link.rel = 'noopener'
       document.body.appendChild(link)
       link.click()
       link.remove()
-      URL.revokeObjectURL(url)
     },
-    editFile(docName) {
-      this.editingDocName = docName
+    editFile(doc) {
+      this.editingDocName = doc?.n ?? ''
+      this.editingDocId = doc?.id ?? null
+      this.editingDocPath = doc?.p ?? ''
       this.selectedFileName = ''
+      this.selectedFile = null
       this.showEditModal = true
     },
     closeEditModal() {
       this.showEditModal = false
+      this.editingDocId = null
+      this.editingDocPath = ''
+      this.selectedFile = null
+      this.selectedFileName = ''
     },
     handleFileSelected(event) {
       const [file] = event.target.files || []
       this.selectedFileName = file ? file.name : ''
+      this.selectedFile = file || null
       this.isDragOver = false
     },
     handleDrop(event) {
@@ -267,16 +290,53 @@ export default {
         this.showToast('รองรับเฉพาะไฟล์ PDF, JPG, PNG', true)
         return
       }
+      this.selectedFile = file
       this.selectedFileName = file.name
     },
     confirmUpload() {
-      if (!this.selectedFileName) return
-      const name = this.editingDocName
+      if (!this.selectedFileName || !this.selectedFile || !this.editingDocId) return
+
+      this.$emit('upload-file', {
+        sortOrder: this.editingDocId,
+        file: this.selectedFile,
+        documentName: this.editingDocName,
+      })
+
       this.closeEditModal()
-      this.showToast(`อัปโหลดไฟล์ "${name}" สำเร็จ`)
     },
     normalizeFilename(name) {
       return name.replace(/\s+/g, '_')
+    },
+    resolveFileUrl(doc, download = false) {
+      const sortOrder = Number(doc?.id)
+      const baseUrl = import.meta.env.VITE_BASE_URL_API
+      if (baseUrl && this.requestNo && sortOrder > 0) {
+        return `${baseUrl}/v1/document-request-attachment-file?requestNo=${encodeURIComponent(this.requestNo)}&sortOrder=${encodeURIComponent(sortOrder)}&download=${download ? 'true' : 'false'}`
+      }
+
+      const filePath = doc?.p
+      if (!filePath || typeof filePath !== 'string') {
+        return ''
+      }
+
+      if (filePath.startsWith('http://') || filePath.startsWith('https://') || filePath.startsWith('blob:') || filePath.startsWith('data:')) {
+        return filePath
+      }
+
+      return ''
+    },
+    extractFilename(filePath) {
+      if (!filePath || typeof filePath !== 'string') {
+        return ''
+      }
+
+      const normalized = filePath.split('?')[0].replace(/\/$/, '')
+      const lastSlash = normalized.lastIndexOf('/')
+      if (lastSlash === -1 || lastSlash === normalized.length - 1) {
+        return ''
+      }
+
+      return normalized.slice(lastSlash + 1)
     },
     saveDocs() {
       const hasErrors = Object.entries(this.docResults).some(([, result]) => {
@@ -295,6 +355,9 @@ export default {
   computed: {
     normalizedDocFilename() {
       return this.normalizeFilename(this.editingDocName || '')
+    },
+    editingDocFilename() {
+      return this.extractFilename(this.editingDocPath) || `${this.normalizedDocFilename}_original.pdf`
     }
   }
 }
