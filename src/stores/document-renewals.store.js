@@ -507,8 +507,7 @@ export const useDocumentRenewalsStore = defineStore({
                 const authStore = useAuthStore();
                 const token = authStore.user?.data?.token;
 
-                const res = await axios.get(`${baseUrl}/v1/document-request-detail`, {
-                    params: { requestNo },
+                const res = await axios.get(`${baseUrl}/v1/document-renewals/${requestNo}`, {
                     headers: buildHeaders(token),
                 });
 
