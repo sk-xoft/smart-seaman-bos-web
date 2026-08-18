@@ -13,10 +13,10 @@ export VITE_BASE_URL_API
 export VITE_API_URL
 export VITE_USE_MOCK
 
-docker compose down
+docker-compose down
 
-docker compose build --no-cache
+docker-compose build --no-cache
 
-docker compose up -d
+docker-compose up -d
 
 echo "==> Done. App running at http://localhost:10000"
