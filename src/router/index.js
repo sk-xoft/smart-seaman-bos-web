@@ -51,24 +51,8 @@ router.beforeEach(async (to) => {
     const authRequired = !publicPages.includes(to.path);
     const authStore = useAuthStore();
 
-    // BYPASS: Set dummy user for development
-    if (!authStore.user) {
-        const dummyUser = {
-            code: 'WA00000',
-            message: 'success',
-            data: {
-                id: '1',
-                username: 'superadmin',
-                email: 'admin@test.com',
-                token: 'dummy-token'
-            }
-        };
-        authStore.user = dummyUser;
-        localStorage.setItem('user', JSON.stringify(dummyUser));
+    if (authRequired && !authStore.user) {
+        authStore.returnUrl = to.fullPath;
+        return '/account/login';
     }
-
-    // if (authRequired && !authStore.user) {
-    //     authStore.returnUrl = to.fullPath;
-    //     return '/account/login';
-    // }
 });
