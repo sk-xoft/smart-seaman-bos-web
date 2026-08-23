@@ -15,9 +15,9 @@ function buildHeaders(token) {
         'correlation-id': uuid.v4(),
     };
 
-    // if (token) {
-    //     headers.Authorization = 'Bearer ' + token;
-    // }
+    if (token) {
+        headers.Authorization = 'Bearer ' + token;
+    }
 
     return headers;
 }
@@ -42,11 +42,11 @@ function buildAddressText(deliverAddress) {
     if (!deliverAddress) return '-';
 
     const parts = [
-        deliverAddress.address_line,
-        deliverAddress.sub_district,
-        deliverAddress.district,
-        deliverAddress.province,
-        deliverAddress.postal_code,
+        deliverAddress.addressLine ?? deliverAddress.address_line,
+        deliverAddress.subDistrictName ?? deliverAddress.sub_district_name ?? deliverAddress.subDistrict ?? deliverAddress.sub_district,
+        deliverAddress.districtName ?? deliverAddress.district_name ?? deliverAddress.district,
+        deliverAddress.provinceName ?? deliverAddress.province_name ?? deliverAddress.province,
+        deliverAddress.postalCode ?? deliverAddress.postal_code,
     ].filter(Boolean);
 
     return parts.length ? parts.join(' ') : '-';
@@ -105,17 +105,30 @@ function normalizeDeptSubmission(deptSubmission) {
         return null;
     }
 
-    const operatorName = deptSubmission.actioned_by_username
-        ?? [deptSubmission.actioned_by_first_name, deptSubmission.actioned_by_last_name].filter(Boolean).join(' ')
+    const operatorName = deptSubmission.actionedByUsername
+        ?? deptSubmission.actioned_by_username
+        ?? [
+            deptSubmission.actionedByFirstName ?? deptSubmission.actioned_by_first_name,
+            deptSubmission.actionedByLastName ?? deptSubmission.actioned_by_last_name,
+        ].filter(Boolean).join(' ')
         ?? '-';
 
     return {
-        submittedAt: formatDateTime(deptSubmission.actioned_at),
+        submittedAt: formatDateTime(
+            deptSubmission.actionedAt
+                ?? deptSubmission.actioned_at
+                ?? deptSubmission.submittedToDeptDate
+                ?? deptSubmission.submitted_to_dept_date
+                ?? deptSubmission.recordedAt
+                ?? deptSubmission.recorded_at,
+        ),
         operatorName: operatorName || '-',
-        operatorPhone: deptSubmission.actioned_by_mobile_number ?? '-',
+        operatorPhone: deptSubmission.actionedByMobileNumber
+            ?? deptSubmission.actioned_by_mobile_number
+            ?? '-',
         action: deptSubmission.action ?? null,
         note: deptSubmission.note ?? '',
-        actionedBy: deptSubmission.actioned_by ?? null,
+        actionedBy: deptSubmission.actionedBy ?? deptSubmission.actioned_by ?? null,
     };
 }
 
@@ -169,27 +182,36 @@ function normalizeDeliveryInfo(deliveryInfo) {
         return null;
     }
 
-    const operatorName = deliveryInfo.shipped_by_username
-        ?? [deliveryInfo.shipped_by_first_name, deliveryInfo.shipped_by_last_name].filter(Boolean).join(' ')
+    const operatorName = deliveryInfo.shippedByUsername
+        ?? deliveryInfo.shipped_by_username
+        ?? [
+            deliveryInfo.shippedByFirstName ?? deliveryInfo.shipped_by_first_name,
+            deliveryInfo.shippedByLastName ?? deliveryInfo.shipped_by_last_name,
+        ].filter(Boolean).join(' ')
         ?? '-';
 
     return {
-        trackingNo: deliveryInfo.tracking_no ?? '-',
-        shippedDate: formatDate(deliveryInfo.shipped_date),
-        shippedDateValue: deliveryInfo.shipped_date ?? '',
-        recordedAt: formatDateTime(deliveryInfo.shipped_recorded_at),
+        trackingNo: deliveryInfo.trackingNo ?? deliveryInfo.tracking_no ?? '-',
+        shippedDate: formatDate(deliveryInfo.shippedDate ?? deliveryInfo.shipped_date),
+        shippedDateValue: deliveryInfo.shippedDateValue ?? deliveryInfo.shipped_date ?? '',
+        recordedAt: formatDateTime(deliveryInfo.shippedRecordedAt ?? deliveryInfo.shipped_recorded_at),
         operatorName: operatorName || '-',
-        operatorPhone: deliveryInfo.shipped_by_mobile_number ?? '-',
-        status: deliveryInfo.delivery_status ?? '-',
+        operatorPhone: deliveryInfo.shippedByMobileNumber
+            ?? deliveryInfo.shipped_by_mobile_number
+            ?? '-',
+        status: deliveryInfo.deliveryStatus ?? deliveryInfo.delivery_status ?? '-',
     };
 }
 
 function buildDocumentsFromAttachments(attachments = []) {
     return attachments.map((item, index) => ({
         id: item.sortOrder ?? index + 1,
+        itemId: item.itemId ?? null,
         n: item.documentName ?? item.document_name ?? `เอกสาร ${index + 1}`,
         f: !!item.fileUploaded,
-        p: item.filePath ?? item.file_path ?? null,
+        // support old flat filePath and new nested files[] array
+        p: item.filePath ?? item.file_path ?? item.files?.[0]?.fileUrl ?? item.files?.[0]?.filePath ?? item.files?.[0]?.url ?? null,
+        fileName: item.files?.[0]?.originalFileName ?? null,
         upd: !!item.isUpdated,
     }));
 }
@@ -209,37 +231,21 @@ function buildAttachmentResults(attachments = []) {
     return results;
 }
 
-function ensurePassedAttachmentResultsForDepartmentStatus(attachmentResults, attachments, statusLabel) {
-    if (statusLabel !== 'รอผลกรมเจ้าท่า') {
-        return attachmentResults;
-    }
-
-    const normalizedResults = { ...attachmentResults };
-    attachments.forEach((item, index) => {
-        const docId = item.sortOrder ?? index + 1;
-        const currentResult = normalizedResults[docId]?.result;
-
-        normalizedResults[docId] = {
-            result: currentResult === 'fix' ? 'pass' : (currentResult || 'pass'),
-            note: '',
-        };
-    });
-
-    return normalizedResults;
-}
-
 function mapStatusCodeToLabel(statusCode, fallbackStatus = 'รอตรวจเอกสาร') {
     const statusMap = {
+        PAYMENT_PENDING: 'รอชำระเงิน',
         PENDING_DOCUMENT_REVIEW: 'รอตรวจเอกสาร',
         PENDING_APPLICANT_CORRECTION: 'รอผู้ยื่นแก้ไข',
+        PENDING_MARINE_DEPARTMENT_RESULT: 'รอผลกรมเจ้าท่า',
         PENDING_DEPARTMENT_RESULT: 'รอผลกรมเจ้าท่า',
+        PENDING_DEPARTMENT_DOCUMENT_PICKUP: 'รอรับเอกสารจากกรม',
         PENDING_DEPARTMENT_PICKUP: 'รอรับเอกสารจากกรม',
         DELIVERING: 'กำลังจัดส่ง',
         DELIVERED: 'จัดส่งสำเร็จ',
         CANCELLED: 'ยกเลิก',
     };
 
-    return statusMap[statusCode] ?? fallbackStatus;
+    return statusMap[(statusCode ?? '').toString().toUpperCase()] ?? fallbackStatus;
 }
 
 function normalizeStepper(stepper, fallbackStatus) {
@@ -252,28 +258,23 @@ function normalizeStepper(stepper, fallbackStatus) {
     const statusSignal = `${statusCode} ${statusLabel}`.toUpperCase();
 
     let currentStep = stepper.currentStep ?? 1;
-    if (statusSignal.includes('จัดส่งสำเร็จ') || statusSignal.includes('DELIVERED') || statusSignal.includes('DELIVERY_SUCCESS') || statusSignal.includes('SHIPPING_SUCCESS')) {
+    if (statusSignal.includes('รอชำระเงิน') || statusSignal.includes('PAYMENT_PENDING')) {
+        currentStep = null;
+    } else if (statusSignal.includes('จัดส่งสำเร็จ') || statusSignal.includes('DELIVERED') || statusSignal.includes('DELIVERY_SUCCESS') || statusSignal.includes('SHIPPING_SUCCESS')) {
         currentStep = 5;
     } else if (statusSignal.includes('กำลังจัดส่ง') || statusSignal.includes('อยู่ระหว่างจัดส่ง') || statusSignal.includes('DELIVERING') || statusSignal.includes('OUT_FOR_DELIVERY') || statusSignal.includes('IN_TRANSIT') || statusSignal.includes('SHIPPING')) {
         currentStep = 4;
-    } else if (statusSignal.includes('รอรับเอกสารจากกรม') || statusSignal.includes('PENDING_DEPARTMENT_PICKUP')) {
+    } else if (statusSignal.includes('รอรับเอกสารจากกรม') || statusSignal.includes('PENDING_DEPARTMENT_DOCUMENT_PICKUP') || statusSignal.includes('PENDING_DEPARTMENT_PICKUP')) {
         currentStep = 3;
-    } else if (statusSignal.includes('รอผลกรมเจ้าท่า') || statusSignal.includes('PENDING_DEPARTMENT_RESULT')) {
+    } else if (statusSignal.includes('รอผลกรมเจ้าท่า') || statusSignal.includes('PENDING_MARINE_DEPARTMENT_RESULT') || statusSignal.includes('PENDING_DEPARTMENT_RESULT')) {
         currentStep = 2;
+    } else if (statusSignal.includes('รอตรวจเอกสาร') || statusSignal.includes('รอผู้ยื่นแก้ไข') || statusSignal.includes('PENDING_DOCUMENT_REVIEW') || statusSignal.includes('PENDING_APPLICANT_CORRECTION')) {
+        currentStep = 1;
     }
 
-    const completedSteps = Array.from({ length: Math.max(currentStep - 1, 0) }, (_, index) => index + 1);
-
-    // Keep status label aligned with stepper stage when backend status code is non-semantic (e.g. UUID).
-    if (currentStep >= 5) {
-        statusLabel = 'จัดส่งสำเร็จ';
-    } else if (currentStep === 4) {
-        statusLabel = 'กำลังจัดส่ง';
-    } else if (currentStep === 3) {
-        statusLabel = 'รอรับเอกสารจากกรม';
-    } else if (currentStep === 2) {
-        statusLabel = 'รอผลกรมเจ้าท่า';
-    }
+    const completedSteps = currentStep == null
+        ? []
+        : Array.from({ length: Math.max(currentStep - 1, 0) }, (_, index) => index + 1);
 
     return {
         statusCode: stepper.statusCode ?? null,
@@ -285,38 +286,48 @@ function normalizeStepper(stepper, fallbackStatus) {
 }
 
 function normalizeDetailResponse(responseData, requestNo, currentRequests = []) {
-    const attachments = responseData.documentAttachments ?? [];
+    // support both old (documentAttachments) and new (items) attachment key
+    const attachments = responseData.documentAttachments ?? responseData.items ?? [];
     const profile = responseData.profile ?? {};
     const deptSubmission = normalizeDeptSubmission(responseData.deptSubmission);
     const deptResult = normalizeDeptResult(responseData.deptResult);
-    const deliveryInfo = normalizeDeliveryInfo(responseData.deliveryInfo);
+    // support both old (deliveryInfo) and new (delivery) delivery key
+    const deliveryInfo = normalizeDeliveryInfo(responseData.deliveryInfo ?? responseData.delivery);
     const deliverAddress = responseData.deliverAddress ?? null;
     const requestFromList = currentRequests.find((req) => req.no === requestNo) ?? null;
-    const fallbackStatus = requestFromList?.status ?? 'รอตรวจเอกสาร';
-    const normalizedStepper = normalizeStepper(responseData.stepper, fallbackStatus);
 
-    const attachmentResults = ensurePassedAttachmentResultsForDepartmentStatus(
-        buildAttachmentResults(attachments),
-        attachments,
-        normalizedStepper?.statusLabel ?? fallbackStatus,
-    );
+    // status can be a string (old) or an object { documentStatusCode, nameTh } (new)
+    const rawStatus = responseData.status;
+    const statusString = typeof rawStatus === 'string'
+        ? rawStatus
+        : (rawStatus?.nameTh ?? mapStatusCodeToLabel(rawStatus?.documentStatusCode, null) ?? null);
+    const fallbackStatus = statusString ?? requestFromList?.status ?? 'รอตรวจเอกสาร';
+
+    // build stepper from responseData.stepper or from status.step when stepper is absent
+    const stepperInput = responseData.stepper
+        ?? (rawStatus?.step != null ? { statusCode: rawStatus?.documentStatusCode, currentStep: rawStatus.step, isCancelled: false } : null);
+    const normalizedStepper = normalizeStepper(stepperInput, fallbackStatus);
+
+    const attachmentResults = buildAttachmentResults(attachments);
 
     return {
         no: responseData.requestNo ?? requestFromList?.no ?? '-',
-        mobileUserUuid: profile.MOBILE_UUID ?? requestFromList?.mobileUserUuid ?? '-',
-        ssid: profile.SMART_SEAMAN_ID ?? requestFromList?.ssid ?? '-',
-        name: profile.FIRST_NAME ?? requestFromList?.name ?? '-',
-        lname: profile.LAST_NAME ?? requestFromList?.lname ?? '-',
-        pos: profile.POSITION_CODE ?? requestFromList?.pos ?? '-',
+        mobileUserUuid: responseData.mobileUserUuid ?? profile.mobileUuid ?? profile.MOBILE_UUID ?? requestFromList?.mobileUserUuid ?? '-',
+        ssid: profile.smartSeamanId ?? profile.SMART_SEAMAN_ID ?? requestFromList?.ssid ?? '-',
+        name: profile.firstName ?? profile.FIRST_NAME ?? requestFromList?.name ?? '-',
+        lname: profile.lastName ?? profile.LAST_NAME ?? requestFromList?.lname ?? '-',
+        pos: profile.positionDescription ?? profile.positionName ?? profile.POSITION_NAME ?? profile.positionCode ?? profile.POSITION_CODE ?? requestFromList?.pos ?? '-',
         doc: responseData.documentName ?? requestFromList?.doc ?? (attachments[0]?.documentName ?? '-'),
         status: normalizedStepper?.statusLabel ?? fallbackStatus,
-        date: responseData.dateOfSubmission ?? requestFromList?.date ?? '-',
-        amt: requestFromList?.amt ?? '-',
-        resubmit: requestFromList?.resubmit ?? false,
-        dob: profile.DATE_OF_BIRTH ?? '-',
-        email: profile.EMAIL ?? '-',
-        mobile: profile.MOBILE_NUMBER ?? '-',
-        company: profile.COMPANY_CODE ?? '-',
+        // support both old (dateOfSubmission) and new (submittedAt) date key
+        date: responseData.dateOfSubmission ?? responseData.submittedAt ?? requestFromList?.date ?? '-',
+        amt: responseData.amount != null ? String(responseData.amount) : (requestFromList?.amt ?? '-'),
+        resubmit: responseData.isResubmit ?? requestFromList?.resubmit ?? false,
+        dob: profile.dateOfBirth ?? profile.DATE_OF_BIRTH ?? '-',
+        age: profile.age ?? '-',
+        email: profile.email ?? profile.EMAIL ?? '-',
+        mobile: profile.mobile ?? profile.mobileNumber ?? profile.MOBILE_NUMBER ?? '-',
+        company: profile.companyDescription ?? profile.companyName ?? profile.COMPANY_NAME ?? profile.companyCode ?? profile.COMPANY_CODE ?? '-',
         deptSubmission,
         deptResult,
         deliveryInfo,
@@ -515,18 +526,34 @@ export const useDocumentRenewalsStore = defineStore({
                 const responseData = res.data?.data ?? res.data ?? {};
 
                 if (!responseCode || responseCode === 'WA00000') {
-                    if (responseData.profile || responseData.documentAttachments || responseData.deliverAddress) {
-                        this.detailRequest = normalizeDetailResponse(responseData, requestNo, this.requests);
-                        return this.detailRequest;
+                    // detect flat response (new API shape) vs wrapped response (old shape)
+                    const isRichFlat = responseData.requestNo
+                        || responseData.documentAttachments
+                        || responseData.items
+                        || responseData.profile
+                        || responseData.deliverAddress;
+
+                    let detailData;
+                    if (isRichFlat) {
+                        detailData = responseData;
+                    } else {
+                        detailData = responseData.documentRequest
+                            ?? responseData.item
+                            ?? responseData.documentRequestDetail
+                            ?? (Array.isArray(responseData.documentRequestList) ? responseData.documentRequestList[0] : null);
                     }
 
-                    const rawDetail = responseData.documentRequest
-                        ?? responseData.item
-                        ?? responseData.documentRequestDetail
-                        ?? (Array.isArray(responseData.documentRequestList) ? responseData.documentRequestList[0] : null)
-                        ?? (Array.isArray(responseData.items) ? responseData.items[0] : null);
+                    if (!detailData) {
+                        this.detailRequest = null;
+                        return null;
+                    }
 
-                    this.detailRequest = rawDetail ? normalizeRequest(rawDetail) : null;
+                    // use rich normalizer if any detail fields are present, otherwise basic
+                    if (detailData.profile || detailData.documentAttachments || detailData.items || detailData.deliverAddress || detailData.requestNo) {
+                        this.detailRequest = normalizeDetailResponse(detailData, requestNo, this.requests);
+                    } else {
+                        this.detailRequest = normalizeRequest(detailData);
+                    }
                     return this.detailRequest;
                 }
 

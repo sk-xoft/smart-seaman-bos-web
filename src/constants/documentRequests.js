@@ -1,5 +1,6 @@
 // Status colors mapping
 export const STATUS_COLORS = {
+  'รอชำระเงิน': '#f59e0b',
   'รอตรวจเอกสาร': '#ff0000',
   'รอผู้ยื่นแก้ไข': '#ff914d',
   'รอผลกรมเจ้าท่า': '#af87ff',

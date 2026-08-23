@@ -44,6 +44,7 @@
             <span v-else class="result-text" :class="getResultClass(docResults[doc.id].result)">
               <template v-if="docResults[doc.id].result === 'pass'">✓ ผ่าน</template>
               <template v-else-if="docResults[doc.id].result === 'fix'">✗ ต้องแก้ไข</template>
+              <template v-else-if="inspectionPending">รอตรวจ</template>
               <template v-else>—</template>
             </span>
           </td>
@@ -78,9 +79,9 @@
       </tbody>
     </table>
 
-    <div v-if="editable" class="table-actions">
+    <div v-if="editable || inspectionActionsDisabled" class="table-actions">
       <div style="display: flex; justify-content: flex-end; margin-bottom: 8px">
-        <button class="btn btn-ghost" @click="saveDocs" :class="{ 'btn-saved': saveSuccess }">
+        <button class="btn btn-ghost" :disabled="inspectionActionsDisabled" @click="saveDocs" :class="{ 'btn-saved': saveSuccess }">
           <i class="light-icon-device-floppy"></i> บันทึกผลตรวจ
         </button>
       </div>
@@ -152,6 +153,14 @@ export default {
       default: false
     },
     uploadable: {
+      type: Boolean,
+      default: false
+    },
+    inspectionPending: {
+      type: Boolean,
+      default: false
+    },
+    inspectionActionsDisabled: {
       type: Boolean,
       default: false
     },
@@ -242,7 +251,7 @@ export default {
 
       window.open(fileUrl, '_blank', 'noopener')
     },
-    downloadFile(doc) {
+    async downloadFile(doc) {
       const fileUrl = this.resolveFileUrl(doc, true)
       if (!fileUrl) {
         this.showToast('ไม่พบไฟล์ที่อัปโหลดสำหรับเอกสารนี้', true)
@@ -250,12 +259,33 @@ export default {
       }
 
       const fallbackName = `${(doc?.n || 'document').replace(/\s+/g, '_')}.pdf`
-      const fileName = this.extractFilename(doc?.p) || fallbackName
+      const fileName = doc?.fileName || this.extractFilename(doc?.p) || fallbackName
+
+      try {
+        const response = await fetch(fileUrl)
+        if (!response.ok) {
+          throw new Error(`Download failed with status ${response.status}`)
+        }
+
+        const blob = await response.blob()
+        const objectUrl = URL.createObjectURL(blob)
+        this.triggerFileDownload(objectUrl, fileName)
+        URL.revokeObjectURL(objectUrl)
+      } catch (error) {
+        const fallbackUrl = this.resolveAttachmentEndpoint(doc, true)
+        if (fallbackUrl && fallbackUrl !== fileUrl) {
+          this.triggerFileDownload(fallbackUrl, fileName)
+          return
+        }
+
+        console.error(error)
+        this.showToast('ดาวน์โหลดไฟล์ไม่สำเร็จ กรุณาลองใหม่', true)
+      }
+    },
+    triggerFileDownload(url, fileName) {
       const link = document.createElement('a')
-      link.href = fileUrl
+      link.href = url
       link.download = fileName
-      link.target = '_blank'
-      link.rel = 'noopener'
       document.body.appendChild(link)
       link.click()
       link.remove()
@@ -308,19 +338,23 @@ export default {
       return name.replace(/\s+/g, '_')
     },
     resolveFileUrl(doc, download = false) {
+      const filePath = doc?.p
+      if (typeof filePath === 'string' && (
+        filePath.startsWith('http://')
+        || filePath.startsWith('https://')
+        || filePath.startsWith('blob:')
+        || filePath.startsWith('data:')
+      )) {
+        return filePath
+      }
+
+      return this.resolveAttachmentEndpoint(doc, download)
+    },
+    resolveAttachmentEndpoint(doc, download = false) {
       const sortOrder = Number(doc?.id)
       const baseUrl = import.meta.env.VITE_BASE_URL_API
       if (baseUrl && this.requestNo && sortOrder > 0) {
         return `${baseUrl}/v1/document-request-attachment-file?requestNo=${encodeURIComponent(this.requestNo)}&sortOrder=${encodeURIComponent(sortOrder)}&download=${download ? 'true' : 'false'}`
-      }
-
-      const filePath = doc?.p
-      if (!filePath || typeof filePath !== 'string') {
-        return ''
-      }
-
-      if (filePath.startsWith('http://') || filePath.startsWith('https://') || filePath.startsWith('blob:') || filePath.startsWith('data:')) {
-        return filePath
       }
 
       return ''

@@ -23,8 +23,26 @@ const { user } = storeToRefs(authStore);
             </router-link>
         </div>
         <div class="flex-1">
-            <button class="btn btn-sm btn-square btn-ghost toggle-sidebar ml-5" @click="toggleSidebar" >
-               <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="feather feather-align-center status_toggle middle" id="sidebar-toggle"><line x1="18" y1="10" x2="6" y2="10"></line><line x1="21" y1="6" x2="3" y2="6"></line><line x1="21" y1="14" x2="3" y2="14"></line><line x1="18" y1="18" x2="6" y2="18"></line></svg>
+            <button class="btn btn-sm btn-square btn-ghost toggle-sidebar ml-5" aria-label="เปิดหรือปิดเมนู" @click="toggleSidebar">
+                <svg
+                    xmlns="http://www.w3.org/2000/svg"
+                    width="24"
+                    height="24"
+                    viewBox="0 0 24 24"
+                    fill="none"
+                    stroke="currentColor"
+                    stroke-width="2"
+                    stroke-linecap="round"
+                    stroke-linejoin="round"
+                    class="feather feather-align-center status_toggle middle"
+                    id="sidebar-toggle"
+                    aria-hidden="true"
+                >
+                    <line x1="18" y1="10" x2="6" y2="10"></line>
+                    <line x1="21" y1="6" x2="3" y2="6"></line>
+                    <line x1="21" y1="14" x2="3" y2="14"></line>
+                    <line x1="18" y1="18" x2="6" y2="18"></line>
+                </svg>
             </button>
         </div>
        <div class="navbar-end">
@@ -79,13 +97,34 @@ export default {
     }
 
     .toggle-sidebar{
+        width: 40px;
+        min-width: 40px;
+        height: 40px;
+        padding: 0 !important;
+        border: 0 !important;
+        outline: 0 !important;
+        box-shadow: none !important;
+
+        &:focus,
+        &:focus-visible,
+        &:active{
+            border: 0 !important;
+            outline: 0 !important;
+            box-shadow: none !important;
+        }
+
         &:hover{
             background-color: rgba(217, 127, 61, 0.1);
         }
 
         svg{
-            width: 20px;
+            display: block;
+            flex-shrink: 0;
+            width: 24px;
+            min-width: 24px;
+            height: 24px;
             color: #d97f3d;
+            stroke: currentColor;
         }
     }
 </style>

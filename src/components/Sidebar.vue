@@ -153,4 +153,5 @@ export default {
         font-size: 28px !important;
         font-weight: 500;
     }
+
 </style>

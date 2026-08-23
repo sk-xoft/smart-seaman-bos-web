@@ -1,6 +1,6 @@
 <script>
 import { h } from 'vue'
-import { STEPPER_STEPS } from '@/constants/documentRequests'
+import { STATUS_COLORS, STEPPER_STEPS } from '@/constants/documentRequests'
 
 export default {
   name: 'StepperCard',
@@ -17,6 +17,7 @@ export default {
   data() {
     return {
       stepsConfig: {
+        'รอชำระเงิน': { done: [], active: null },
         'รอตรวจเอกสาร': { done: [], active: 1 },
         'รอผู้ยื่นแก้ไข': { done: [], active: 1 },
         'รอผลกรมเจ้าท่า': { done: [1], active: 2 },
@@ -29,6 +30,10 @@ export default {
   },
   computed: {
     currentStepConfig() {
+      if (this.status === 'รอชำระเงิน' || this.request?.stepper?.statusCode === 'PAYMENT_PENDING') {
+        return { done: [], active: null }
+      }
+
       if (this.request.stepper) {
         if (this.request.stepper.isCancelled) {
           return { done: [], active: 1 }
@@ -36,7 +41,7 @@ export default {
 
         return {
           done: this.request.stepper.completedSteps ?? [],
-          active: this.request.stepper.currentStep ?? 1
+          active: this.request.stepper.currentStep ?? null
         }
       }
 
@@ -87,6 +92,13 @@ export default {
             h('div', {}, [
               h('div', { class: 'info-label' }, 'วันที่ยื่น'),
               h('div', { class: 'info-value' }, this.request.date)
+            ]),
+            h('div', {}, [
+              h('div', { class: 'info-label' }, 'สถานะคำขอ'),
+              h('div', {
+                class: 'status-badge',
+                style: { color: STATUS_COLORS[this.status] }
+              }, this.status)
             ])
           ])
         ]),

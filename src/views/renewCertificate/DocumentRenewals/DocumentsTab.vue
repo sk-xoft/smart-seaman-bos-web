@@ -18,17 +18,21 @@
         :requestNo="request.no"
         :editable="isEditable"
         :uploadable="isUploadable"
+        :inspectionPending="isPaymentPending"
+        :inspectionActionsDisabled="isPaymentPending"
         :initialResults="docResults"
         @save="saveDocuments"
         @changed="onDocumentsChanged"
         @upload-file="uploadFile"
       />
       <ActionButtons
-        v-if="isInspectionStep"
+        v-if="isInspectionStep || isPaymentPending"
         :docsSaved="docsSaved"
         :allAnswered="allAnswered"
         :allPass="allPass"
         :hasFix="hasFix"
+        :disabled="isPaymentPending"
+        :showCancel="!isPaymentPending"
         @cancel="$emit('cancel')"
         @send-back="$emit('send-back')"
         @submit="$emit('submit')"
@@ -61,7 +65,15 @@ export default {
     }
   },
   computed: {
+    isPaymentPending() {
+      return this.request?.status === 'รอชำระเงิน'
+        || this.request?.stepper?.statusCode === 'PAYMENT_PENDING'
+    },
     isInspectionStep() {
+      if (this.isPaymentPending) {
+        return false
+      }
+
       const currentStep = this.request?.stepper?.currentStep
       if (currentStep === 1) {
         return true
@@ -74,7 +86,7 @@ export default {
       return this.isInspectionStep
     },
     isUploadable() {
-      if (this.request?.stepper?.isCancelled) {
+      if (this.isPaymentPending || this.request?.stepper?.isCancelled) {
         return false
       }
 
@@ -125,7 +137,8 @@ export default {
             continue
           }
 
-          const fileUrl = `${baseUrl}/v1/document-request-attachment-file?requestNo=${encodeURIComponent(requestNo)}&sortOrder=${encodeURIComponent(sortOrder)}&download=true`
+          const signedUrl = typeof doc.p === 'string' && /^https?:\/\//i.test(doc.p) ? doc.p : ''
+          const fileUrl = signedUrl || `${baseUrl}/v1/document-request-attachment-file?requestNo=${encodeURIComponent(requestNo)}&sortOrder=${encodeURIComponent(sortOrder)}&download=true`
           const response = await fetch(fileUrl)
 
           if (!response.ok) {
@@ -187,16 +200,21 @@ export default {
       return ''
     },
     initializeDocResults() {
-      this.docsSaved = false
       const docs = this.documents
 
       if (this.request.attachmentResults) {
         docs.forEach(d => {
           this.docResults[d.id] = this.request.attachmentResults[d.id] ?? { result: '', note: '' }
         })
+        this.docsSaved = docs.length > 0 && docs.every(d => {
+          const inspection = this.docResults[d.id]
+          return inspection.result === 'pass'
+            || (inspection.result === 'fix' && inspection.note.trim() !== '')
+        })
         return
       }
 
+      this.docsSaved = false
       docs.forEach(d => {
         if (this.request.resubmit) {
           this.docResults[d.id] = d.id <= 2 ? { result: 'pass', note: '' } : { result: '', note: '' }

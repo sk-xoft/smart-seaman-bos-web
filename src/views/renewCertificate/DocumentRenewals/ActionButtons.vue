@@ -1,16 +1,16 @@
 <template>
   <div class="action-buttons">
     <div class="actions-container">
-      <button class="btn btn-danger" @click="$emit('cancel')">
+      <button v-if="showCancel" class="btn btn-danger" @click="$emit('cancel')">
         <i class="light-icon-trash"></i> ยกเลิกคำขอ
       </button>
 
       <div class="right-actions">
-        <span class="hint-text" id="doc-hint" v-if="hintText">{{ hintText }}</span>
-        <button class="btn btn-outline" :disabled="!canSendBack" @click="$emit('send-back')">
+        <span class="hint-text" id="doc-hint" v-if="!disabled && hintText">{{ hintText }}</span>
+        <button class="btn btn-outline" :disabled="disabled || !canSendBack" @click="$emit('send-back')">
           <i class="light-icon-arrow-back"></i> ส่งกลับให้แก้ไข
         </button>
-        <button class="btn btn-primary" :disabled="!canSubmit" @click="$emit('submit')">
+        <button class="btn btn-primary" :disabled="disabled || !canSubmit" @click="$emit('submit')">
           <i class="light-icon-send"></i> ยื่นกรมเจ้าท่าแล้ว
         </button>
       </div>
@@ -37,6 +37,14 @@ export default {
     hasFix: {
       type: Boolean,
       default: false
+    },
+    disabled: {
+      type: Boolean,
+      default: false
+    },
+    showCancel: {
+      type: Boolean,
+      default: true
     }
   },
   emits: ['cancel', 'send-back', 'submit'],

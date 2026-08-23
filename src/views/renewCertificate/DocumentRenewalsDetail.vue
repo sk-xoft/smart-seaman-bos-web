@@ -138,6 +138,12 @@ export default {
       this.applyDefaultTab()
     },
     applyDefaultTab() {
+      if (this.selectedRequest?.status === 'รอชำระเงิน'
+        || this.selectedRequest?.stepper?.statusCode === 'PAYMENT_PENDING') {
+        this.activeTab = 'docs'
+        return
+      }
+
       const requestedTab = this.$route.query.tab
       if (requestedTab === 'docs' || requestedTab === 'dept' || requestedTab === 'delivery') {
         this.activeTab = requestedTab
@@ -212,9 +218,14 @@ export default {
     async handleDocumentsSaved(results) {
       if (!this.selectedRequest?.no) return
 
-      await this.store.saveInspectionResults(this.selectedRequest.no, results)
-      await this.loadDetail()
-      this.showToast('บันทึกผลตรวจเรียบร้อยแล้ว', 'success')
+      try {
+        await this.store.saveInspectionResults(this.selectedRequest.no, results)
+        await this.loadDetail()
+        this.showToast('บันทึกผลตรวจเรียบร้อยแล้ว', 'success')
+      } catch {
+        await this.loadDetail()
+        this.showToast('บันทึกผลตรวจไม่สำเร็จ กรุณาลองใหม่', 'error')
+      }
     },
     async handleDeptResultSaved(payload) {
       if (!this.selectedRequest?.no) return
