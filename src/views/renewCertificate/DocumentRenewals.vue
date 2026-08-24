@@ -222,6 +222,7 @@ export default {
       const counts = this.store.statusCounts
       return [
         { value: 'all', label: 'ทั้งหมด', count: counts.all ?? 0 },
+        { value: 'รอชำระเงิน', label: 'รอชำระเงิน', count: counts['รอชำระเงิน'] ?? 0 },
         { value: 'รอตรวจเอกสาร', label: 'รอตรวจเอกสาร', count: counts['รอตรวจเอกสาร'] ?? 0 },
         { value: 'รอผู้ยื่นแก้ไข', label: 'รอผู้ยื่นแก้ไข', count: counts['รอผู้ยื่นแก้ไข'] ?? 0 },
         { value: 'รอผลกรมเจ้าท่า', label: 'รอผลกรมเจ้าท่า', count: counts['รอผลกรมเจ้าท่า'] ?? 0 },

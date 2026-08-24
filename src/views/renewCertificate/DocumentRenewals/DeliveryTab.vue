@@ -39,12 +39,32 @@
         </div>
 
         <div class="right-panel">
-          <div class="panel-title">สถานะการจัดส่ง</div>
+          <div class="tracking-header">
+            <div class="panel-title">สถานะการจัดส่ง</div>
+            <button class="btn-refresh" :disabled="loading" title="รีเฟรชสถานะ" @click="$emit('refresh')">
+              <svg class="refresh-icon" :class="{ spinning: loading }" viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M20 11a8 8 0 1 0 2.34 5.66M20 4v7h-7" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </button>
+          </div>
           <p class="api-hint">
             <i class="ti ti-info-circle"></i> ข้อมูลจาก API ไปรษณีย์ไทย
+            <span v-if="lastUpdatedText">อัปเดตล่าสุด {{ lastUpdatedText }}</span>
           </p>
 
-          <div class="tracking-timeline">
+          <div v-if="loading" class="tracking-state">
+            <i class="ti ti-loader-2 spinning"></i>
+            <span>กำลังตรวจสอบสถานะการจัดส่ง</span>
+          </div>
+          <div v-else-if="error" class="tracking-state error-state">
+            <i class="ti ti-alert-circle"></i>
+            <span>{{ error }}</span>
+          </div>
+          <div v-else-if="!tracks.length" class="tracking-state">
+            <i class="ti ti-package-off"></i>
+            <span>ยังไม่พบประวัติการติดตามสำหรับหมายเลขนี้</span>
+          </div>
+          <div v-else class="tracking-timeline">
             <div v-for="(track, idx) in deliveryTracks" :key="idx" class="track-item">
               <div class="track-dot-col">
                 <div class="track-dot" :class="{ 'td-cur': track.cur, 'td-done': !track.cur }"></div>
@@ -66,14 +86,29 @@
 </template>
 
 <script>
-import { DELIVERY_TRACKS_SENDING, DELIVERY_TRACKS_DELIVERED } from '@/constants/documentRequests'
-
 export default {
   name: 'DeliveryTab',
+  emits: ['refresh'],
   props: {
     request: {
       type: Object,
       required: true
+    },
+    tracks: {
+      type: Array,
+      default: () => []
+    },
+    loading: {
+      type: Boolean,
+      default: false
+    },
+    error: {
+      type: String,
+      default: ''
+    },
+    lastUpdated: {
+      type: String,
+      default: null
     }
   },
   computed: {
@@ -91,9 +126,46 @@ export default {
       }
     },
     deliveryTracks() {
-      return this.request.status === 'จัดส่งสำเร็จ' 
-        ? DELIVERY_TRACKS_DELIVERED 
-        : DELIVERY_TRACKS_SENDING
+      if (!this.tracks.length) {
+        return []
+      }
+
+      const successKeywords = [
+        'จัดส่งสำเร็จ',
+        'นำจ่ายสำเร็จ',
+        'นำส่งสำเร็จ',
+        'delivered',
+        'delivery successful',
+        'successfully delivered'
+      ]
+
+      const normalized = this.tracks.map((track) => ({
+        ...track,
+        status: track.status ?? '-',
+        loc: track.loc ?? track.location ?? '-',
+        cur: Boolean(track.cur)
+      }))
+
+      const hasSuccessfulDelivery = normalized.some((track) => {
+        const statusText = String(track.status ?? '').toLowerCase()
+        return successKeywords.some((keyword) => statusText.includes(String(keyword).toLowerCase()))
+      })
+
+      if (hasSuccessfulDelivery) {
+        return normalized.map((track, index) => ({
+          ...track,
+          cur: index === normalized.length - 1
+        }))
+      }
+
+      return normalized
+    },
+    lastUpdatedText() {
+      if (!this.lastUpdated) return ''
+      return new Intl.DateTimeFormat('th-TH', {
+        dateStyle: 'short',
+        timeStyle: 'short'
+      }).format(new Date(this.lastUpdated))
     }
   },
   methods: {
@@ -153,6 +225,47 @@ export default {
     font-size: 14px;
     font-weight: 600;
     margin-bottom: 14px;
+  }
+
+  .tracking-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+
+    .panel-title {
+      margin-bottom: 0;
+    }
+  }
+
+  .btn-refresh {
+    width: 30px;
+    height: 30px;
+    border: 1px solid #2a3a4a;
+    border-radius: 4px;
+    background: transparent;
+    color: #9ca3af;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+
+    &:hover:not(:disabled) {
+      color: #21e5f8;
+      border-color: #21e5f8;
+    }
+
+    &:disabled {
+      cursor: wait;
+      opacity: 0.6;
+    }
+  }
+
+  .refresh-icon {
+    width: 12px;
+    height: 15px;
+    display: block;
+    stroke: currentColor;
+    transform-origin: center;
   }
 
   .info-rows {
@@ -228,6 +341,30 @@ export default {
     i {
       font-size: 12px;
     }
+  }
+
+  .tracking-state {
+    min-height: 150px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+    color: #6b7280;
+    font-size: 12px;
+    text-align: center;
+
+    i {
+      font-size: 24px;
+    }
+
+    &.error-state {
+      color: #f87171;
+    }
+  }
+
+  .spinning {
+    animation: spin 0.8s linear infinite;
   }
 
   .tracking-timeline {
@@ -307,6 +444,12 @@ export default {
         }
       }
     }
+  }
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 </style>

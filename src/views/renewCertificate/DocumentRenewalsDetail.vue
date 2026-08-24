@@ -46,7 +46,15 @@
             @save-receive-doc="handleReceiveDocSaved"
             @save-delivery-info="handleDeliveryInfoSaved"
           />
-          <DeliveryTab v-if="activeTab === 'delivery'" :request="selectedRequest" />
+          <DeliveryTab
+            v-if="activeTab === 'delivery'"
+            :request="selectedRequest"
+            :tracks="store.trackingEvents"
+            :loading="store.trackingLoading"
+            :error="store.trackingError"
+            :last-updated="store.trackingLastUpdated"
+            @refresh="loadTracking"
+          />
         </div>
       </div>
 
@@ -136,6 +144,21 @@ export default {
       const requestNo = this.$route.params.requestNo
       await this.store.fetchDetail(requestNo)
       this.applyDefaultTab()
+      if (this.canLoadTracking()) {
+        await this.loadTracking()
+      }
+    },
+    canLoadTracking() {
+      const statusCode = this.selectedRequest?.stepper?.statusCode
+      const trackingNo = this.selectedRequest?.deliveryInfo?.trackingNo
+      return ['กำลังจัดส่ง', 'จัดส่งสำเร็จ'].includes(this.selectedRequest?.status)
+        && ['-', '', null, undefined].includes(trackingNo) === false
+        || ['DELIVERING', 'DELIVERED'].includes(statusCode)
+          && ['-', '', null, undefined].includes(trackingNo) === false
+    },
+    async loadTracking() {
+      if (!this.canLoadTracking()) return
+      await this.store.fetchDeliveryTracking(this.selectedRequest.no)
     },
     applyDefaultTab() {
       if (this.selectedRequest?.status === 'รอชำระเงิน'

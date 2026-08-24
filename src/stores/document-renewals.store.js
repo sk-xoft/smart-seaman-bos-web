@@ -343,7 +343,7 @@ function normalizeDetailResponse(responseData, requestNo, currentRequests = []) 
 
 function computeStatusCounts(requests, total = requests.length, currentFilter = 'all') {
     const counts = { all: requests.length };
-    const statuses = ['รอตรวจเอกสาร', 'รอผู้ยื่นแก้ไข', 'รอผลกรมเจ้าท่า', 'รอรับเอกสารจากกรม', 'กำลังจัดส่ง', 'จัดส่งสำเร็จ', 'ยกเลิก'];
+    const statuses = ['รอชำระเงิน', 'รอตรวจเอกสาร', 'รอผู้ยื่นแก้ไข', 'รอผลกรมเจ้าท่า', 'รอรับเอกสารจากกรม', 'กำลังจัดส่ง', 'จัดส่งสำเร็จ', 'ยกเลิก'];
     statuses.forEach(s => counts[s] = 0);
     requests.forEach(r => {
         if (counts[r.status] !== undefined) counts[r.status]++;
@@ -381,6 +381,18 @@ function normalizeStatusCounts(statusCounts, total = 0) {
     }
 
     return counts;
+}
+
+function isSuccessfulDeliveryStatus(status) {
+    const statusText = String(status ?? '').toLowerCase();
+    return [
+        'จัดส่งสำเร็จ',
+        'นำจ่ายสำเร็จ',
+        'นำส่งสำเร็จ',
+        'delivered',
+        'delivery successful',
+        'successfully delivered',
+    ].some(keyword => statusText.includes(keyword));
 }
 
 function getMockList({ filter, searchFilters, page, pageSize }) {
@@ -426,6 +438,10 @@ export const useDocumentRenewalsStore = defineStore({
         pageSize: 10,
         detailRequest: null,
         detailLoading: false,
+        trackingEvents: [],
+        trackingLoading: false,
+        trackingError: '',
+        trackingLastUpdated: null,
         loading: false,
         currentFilter: 'all',
         searchFilters: {
@@ -509,6 +525,9 @@ export const useDocumentRenewalsStore = defineStore({
 
         async fetchDetail(requestNo) {
             this.detailLoading = true;
+            this.trackingEvents = [];
+            this.trackingError = '';
+            this.trackingLastUpdated = null;
             try {
                 if (!requestNo) {
                     this.detailRequest = null;
@@ -569,6 +588,64 @@ export const useDocumentRenewalsStore = defineStore({
                 return null;
             } finally {
                 this.detailLoading = false;
+            }
+        },
+
+        async fetchDeliveryTracking(requestNo) {
+            if (!requestNo) {
+                return null;
+            }
+
+            this.trackingLoading = true;
+            this.trackingError = '';
+            try {
+                if (this.useMock) {
+                    this.trackingEvents = [];
+                    return null;
+                }
+
+                const authStore = useAuthStore();
+                const token = authStore.user?.data?.token;
+                const res = await axios.get(`${baseUrl}/v1/document-renewals/${requestNo}/tracking`, {
+                    headers: buildHeaders(token),
+                });
+
+                if (res.data?.code === 'WA00007') {
+                    authStore.logout();
+                }
+
+                const data = res.data?.data ?? {};
+                this.trackingEvents = Array.isArray(data.events)
+                    ? data.events.map((event) => ({
+                        time: event.time ?? '-',
+                        status: event.status ?? '-',
+                        loc: [event.location, event.postcode].filter(value => value && value !== '-').join(' ') || '-',
+                        cur: !!event.current,
+                    }))
+                    : [];
+
+                if (this.detailRequest && this.trackingEvents.some(event => isSuccessfulDeliveryStatus(event.status))) {
+                    this.detailRequest.status = 'จัดส่งสำเร็จ';
+                    this.detailRequest.stepper = {
+                        ...(this.detailRequest.stepper ?? {}),
+                        statusCode: 'DELIVERED',
+                        currentStep: 5,
+                        completedSteps: [1, 2, 3, 4],
+                        isCancelled: false,
+                        statusLabel: 'จัดส่งสำเร็จ',
+                    };
+                }
+
+                this.trackingLastUpdated = data.lastUpdated ?? null;
+                return data;
+            } catch (error) {
+                this.trackingEvents = [];
+                this.trackingError = error.response?.data?.description
+                    ?? error.response?.data?.message
+                    ?? 'ไม่สามารถโหลดสถานะจากไปรษณีย์ไทยได้';
+                return null;
+            } finally {
+                this.trackingLoading = false;
             }
         },
 
