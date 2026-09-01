@@ -238,15 +238,20 @@ export default {
       }
       this.showModal = false
     },
-    async handleDocumentsSaved(results) {
-      if (!this.selectedRequest?.no) return
+    async handleDocumentsSaved(results, complete) {
+      if (!this.selectedRequest?.no) {
+        complete(false)
+        return
+      }
 
       try {
         await this.store.saveInspectionResults(this.selectedRequest.no, results)
         await this.loadDetail()
+        complete(true)
         this.showToast('บันทึกผลตรวจเรียบร้อยแล้ว', 'success')
       } catch {
         await this.loadDetail()
+        complete(false)
         this.showToast('บันทึกผลตรวจไม่สำเร็จ กรุณาลองใหม่', 'error')
       }
     },

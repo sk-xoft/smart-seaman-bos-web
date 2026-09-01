@@ -12,7 +12,14 @@
       </div>
 
       <div class="documents-header">
-        <div class="title">รายการเอกสารประกอบ</div>
+        <div v-if="isCancelled" class="cancelled-notice">
+          <span class="cancelled-notice__badge">
+            <i class="light-icon-x"></i>
+            ยกเลิกคำขอแล้ว
+          </span>
+          <span class="cancelled-notice__date"> ยกเลิกเมื่อ  {{ request.date }}</span>
+        </div>
+        <div v-else class="title">รายการเอกสารประกอบ</div>
         <button class="btn btn-primary" @click="downloadAllFiles">
           <i class="light-icon-download"></i> ดาวน์โหลดทั้งหมด (.zip)
         </button>
@@ -25,7 +32,7 @@
         :uploadable="isUploadable"
         :inspectionPending="isPaymentPending"
         :inspectionActionsDisabled="isPaymentPending"
-        :showUpdatedBadges="request.resubmit && isInspectionStep"
+        :showUpdatedBadges="request.resubmit"
         :initialResults="docResults"
         @save="saveDocuments"
         @changed="onDocumentsChanged"
@@ -43,6 +50,11 @@
         @send-back="$emit('send-back')"
         @submit="$emit('submit')"
       />
+      <div v-else-if="isApplicantCorrection" class="correction-actions">
+        <button class="correction-cancel-button" @click="$emit('cancel')">
+          <i class="light-icon-trash"></i> ยกเลิกคำขอ
+        </button>
+      </div>
     </div>
   </div>
 </template>
@@ -71,32 +83,29 @@ export default {
     }
   },
   computed: {
+    isCancelled() {
+      return this.request?.status === 'ยกเลิก' || this.request?.stepper?.isCancelled
+    },
     isPaymentPending() {
       return this.request?.status === 'รอชำระเงิน'
         || this.request?.stepper?.statusCode === 'PAYMENT_PENDING'
     },
+    isDocumentReviewPending() {
+      return this.request?.status === 'รอตรวจเอกสาร'
+        || this.request?.stepper?.statusCode === 'PENDING_DOCUMENT_REVIEW'
+    },
+    isApplicantCorrection() {
+      return this.request?.status === 'รอผู้ยื่นแก้ไข'
+        || this.request?.stepper?.statusCode === 'PENDING_APPLICANT_CORRECTION'
+    },
     isInspectionStep() {
-      if (this.isPaymentPending) {
-        return false
-      }
-
-      const currentStep = this.request?.stepper?.currentStep
-      if (currentStep === 1) {
-        return true
-      }
-
-      // Fallback for responses that do not include stepper yet.
-      return ['รอตรวจเอกสาร', 'รอผู้ยื่นแก้ไข'].includes(this.request?.status)
+      return this.isDocumentReviewPending
     },
     isEditable() {
       return this.isInspectionStep
     },
     isUploadable() {
-      if (this.isPaymentPending || this.request?.stepper?.isCancelled) {
-        return false
-      }
-
-      return this.request?.status !== 'ยกเลิก'
+      return this.isDocumentReviewPending
     },
     documents() {
       if (Array.isArray(this.request.documents) && this.request.documents.length) {
@@ -235,10 +244,13 @@ export default {
       this.docResults = results
       this.docsSaved = false
     },
-    saveDocuments(results) {
+    saveDocuments(results, complete) {
       this.docResults = results
-      this.docsSaved = true
-      this.$emit('documents-saved', results)
+      this.docsSaved = false
+      this.$emit('documents-saved', results, (saved) => {
+        this.docsSaved = saved
+        complete(saved)
+      })
     },
     uploadFile(payload) {
       this.$emit('upload-file', payload)
@@ -308,6 +320,66 @@ export default {
     color: #fff;
     font-size: 14px;
     font-weight: 500;
+  }
+
+  .cancelled-notice {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    min-width: 0;
+
+    &__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      padding: 5px 10px;
+      border-radius: 6px;
+      background: #2d1515;
+      color: #f87171;
+      font-size: 12px;
+      font-weight: 600;
+      white-space: nowrap;
+    }
+
+    &__badge i {
+      font-size: 14px;
+    }
+
+    &__date {
+      color: #9ca3af;
+      font-size: 12px;
+      white-space: nowrap;
+    }
+  }
+}
+
+.correction-actions {
+  margin-top: 16px;
+  padding-top: 12px;
+  border-top: 1px dashed #2d3748;
+}
+
+.correction-cancel-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  height: 40px;
+  padding: 0 20px;
+  border: 1px solid #ef4444;
+  border-radius: 6px;
+  background: transparent;
+  color: #ef4444;
+  font-family: 'Prompt', sans-serif;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+
+  &:hover {
+    background: rgba(239, 68, 68, 0.1);
+  }
+
+  i {
+    font-size: 15px;
   }
 }
 </style>

@@ -225,11 +225,15 @@ function buildAttachmentResults(attachments = []) {
     const results = {};
 
     attachments.forEach((item, index) => {
-        const result = item.checkResult === 'fix' ? 'fix' : item.checkResult === 'pass' ? 'pass' : '';
+        const rawResult = (item.checkResult ?? item.check_result ?? item.approveStatus ?? item.approve_status ?? '')
+            .toString()
+            .trim()
+            .toLowerCase();
+        const result = rawResult === 'fix' ? 'fix' : rawResult === 'pass' ? 'pass' : '';
         const docId = item.sortOrder ?? index + 1;
         results[docId] = {
             result,
-            note: item.checkNote ?? '',
+            note: item.checkNote ?? item.check_note ?? item.note ?? '',
         };
     });
 
@@ -730,8 +734,12 @@ export const useDocumentRenewalsStore = defineStore({
                 { headers: buildHeaders(token) }
             );
 
-            if (res.data?.code === 'WA00007') {
+            const responseCode = res.data?.code;
+            if (responseCode === 'WA00007') {
                 authStore.logout();
+            }
+            if (responseCode !== 'WA00000') {
+                throw new Error(res.data?.description || 'Can not save inspection results.');
             }
 
             if (this.detailRequest && this.detailRequest.no === requestNo) {

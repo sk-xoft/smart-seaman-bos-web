@@ -93,13 +93,6 @@ export default {
               h('div', { class: 'info-label' }, 'วันที่ยื่น'),
               h('div', { class: 'info-value' }, this.request.date)
             ]),
-            h('div', {}, [
-              h('div', { class: 'info-label' }, 'สถานะคำขอ'),
-              h('div', {
-                class: 'status-badge',
-                style: { color: STATUS_COLORS[this.status] }
-              }, this.status)
-            ])
           ])
         ]),
         h('div', { class: 'divider' }),

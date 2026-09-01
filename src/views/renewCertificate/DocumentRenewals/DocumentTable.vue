@@ -81,7 +81,7 @@
 
     <div v-if="editable || inspectionActionsDisabled" class="table-actions">
       <div style="display: flex; justify-content: flex-end; margin-bottom: 8px">
-        <button class="btn btn-ghost" :disabled="inspectionActionsDisabled" @click="saveDocs" :class="{ 'btn-saved': saveSuccess }">
+        <button class="btn btn-ghost" :disabled="inspectionActionsDisabled || isSaving" @click="saveDocs" :class="{ 'btn-saved': saveSuccess }">
           <i class="light-icon-device-floppy"></i> บันทึกผลตรวจ
         </button>
       </div>
@@ -178,6 +178,7 @@ export default {
     return {
       docResults: {},
       saveSuccess: false,
+      isSaving: false,
       showEditModal: false,
       editingDocName: '',
       editingDocId: null,
@@ -377,6 +378,8 @@ export default {
       return normalized.slice(lastSlash + 1)
     },
     saveDocs() {
+      if (this.isSaving) return
+
       const hasErrors = Object.entries(this.docResults).some(([, result]) => {
         return result.result === 'fix' && !result.note.trim()
       })
@@ -386,8 +389,12 @@ export default {
         return
       }
 
-      this.saveSuccess = true
-      this.$emit('save', this.cloneResults())
+      this.saveSuccess = false
+      this.isSaving = true
+      this.$emit('save', this.cloneResults(), (saved) => {
+        this.saveSuccess = saved
+        this.isSaving = false
+      })
     }
   },
   computed: {
