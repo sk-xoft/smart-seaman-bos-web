@@ -34,6 +34,7 @@ function normalizeRequest(item) {
         doc: item.doc ?? item.documentName ?? item.documentType ?? item.document_display_name ?? item.document_name_th ?? '-',
         status: item.status ?? item.requestStatus ?? item.document_status_name_th ?? item.document_status_name ?? '-',
         date: formatDateTime(item.date ?? item.requestDate ?? item.submitted_at ?? item.created_at ?? item.createdAt),
+        cancelledAt: formatShortBangkokDateTime(item.cancelledAt ?? item.cancelled_at),
         amt: item.amt ?? item.amount ?? item.paymentAmount ?? '-',
         resubmit: item.resubmit ?? item.isResubmit ?? item.is_resubmit ?? false,
     };
@@ -97,6 +98,42 @@ function formatDateTime(value) {
         day: '2-digit',
         month: '2-digit',
         year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+    }).format(date).replace(',', '');
+}
+
+function formatShortBangkokDateTime(value) {
+    if (!value) {
+        return null;
+    }
+
+    if (typeof value === 'string') {
+        const normalized = value.trim();
+        const displayDateMatch = normalized.match(/^(\d{2})\/(\d{2})\/(\d{2}|\d{4})\s+(\d{2}):(\d{2})$/);
+        if (displayDateMatch) {
+            const [, day, month, year, hours, minutes] = displayDateMatch;
+            return `${day}/${month}/${year.slice(-2)} ${hours}:${minutes}`;
+        }
+
+        const bangkokLocalMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/);
+        if (bangkokLocalMatch) {
+            const [, year, month, day, hours, minutes] = bangkokLocalMatch;
+            return `${day}/${month}/${year.slice(-2)} ${hours}:${minutes}`;
+        }
+    }
+
+    const date = parseDateValue(value);
+    if (!date) {
+        return value;
+    }
+
+    return new Intl.DateTimeFormat('en-GB', {
+        timeZone: BANGKOK_TIME_ZONE,
+        day: '2-digit',
+        month: '2-digit',
+        year: '2-digit',
         hour: '2-digit',
         minute: '2-digit',
         hourCycle: 'h23',
@@ -319,6 +356,7 @@ function normalizeDetailResponse(responseData, requestNo, currentRequests = []) 
 
     const attachmentResults = buildAttachmentResults(attachments);
     const rawResubmittedAt = responseData.resubmittedAt ?? responseData.resubmitted_at ?? null;
+    const rawCancelledAt = responseData.cancelledAt ?? responseData.cancelled_at ?? null;
 
     return {
         no: responseData.requestNo ?? requestFromList?.no ?? '-',
@@ -332,6 +370,7 @@ function normalizeDetailResponse(responseData, requestNo, currentRequests = []) 
         // support both old (dateOfSubmission) and new (submittedAt) date key
         date: responseData.dateOfSubmission ?? responseData.submittedAt ?? requestFromList?.date ?? '-',
         resubmittedAt: rawResubmittedAt ? formatDateTime(rawResubmittedAt) : null,
+        cancelledAt: formatShortBangkokDateTime(rawCancelledAt),
         amt: responseData.amount != null ? String(responseData.amount) : (requestFromList?.amt ?? '-'),
         resubmit: responseData.isResubmit ?? requestFromList?.resubmit ?? false,
         dob: profile.dateOfBirth ?? profile.DATE_OF_BIRTH ?? '-',

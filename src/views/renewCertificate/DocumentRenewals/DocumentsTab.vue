@@ -17,10 +17,12 @@
             <i class="light-icon-x"></i>
             ยกเลิกคำขอแล้ว
           </span>
-          <span class="cancelled-notice__date"> ยกเลิกเมื่อ  {{ request.date }}</span>
+          <span v-if="request.cancelledAt" class="cancelled-notice__date">
+            ยกเลิกเมื่อ {{ request.cancelledAt }}
+          </span>
         </div>
         <div v-else class="title">รายการเอกสารประกอบ</div>
-        <button class="btn btn-primary" @click="downloadAllFiles">
+        <button v-if="!isCancelled" class="btn btn-primary" @click="downloadAllFiles">
           <i class="light-icon-download"></i> ดาวน์โหลดทั้งหมด (.zip)
         </button>
       </div>
