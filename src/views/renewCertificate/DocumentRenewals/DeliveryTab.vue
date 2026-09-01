@@ -452,4 +452,129 @@ export default {
     transform: rotate(360deg);
   }
 }
+
+@media (max-width: 1024px) {
+  .delivery-content {
+    .panel-layout {
+      flex-direction: column;
+      gap: 24px;
+
+      .left-panel,
+      .right-panel {
+        width: 100%;
+        padding: 0;
+      }
+
+      .left-panel {
+        flex: none;
+        padding-bottom: 24px;
+        border-right: none;
+        border-bottom: 1px solid #1e293b;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .tab-content {
+    padding: 12px 0;
+  }
+
+  .empty-state {
+    padding: 32px 16px;
+  }
+
+  .delivery-content {
+    .panel-layout {
+      gap: 20px;
+
+      .left-panel {
+        padding-bottom: 20px;
+      }
+    }
+
+    .info-rows {
+      .info-row {
+        gap: 12px;
+        padding: 9px 0;
+      }
+
+      .info-label {
+        width: 140px;
+        font-size: 12px;
+      }
+
+      .info-value {
+        flex: 1;
+        min-width: 0;
+        font-size: 12px;
+        justify-content: flex-end;
+        overflow-wrap: anywhere;
+        word-break: break-word;
+
+        &.tracking {
+          flex-wrap: wrap;
+          justify-content: flex-end;
+        }
+      }
+    }
+
+    .btn-copy {
+      min-height: 32px;
+      padding: 5px 9px;
+      flex-shrink: 0;
+    }
+
+    .api-hint {
+      flex-wrap: wrap;
+      line-height: 1.5;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .delivery-content {
+    .info-rows {
+      .info-row {
+        flex-direction: column;
+        gap: 3px;
+      }
+
+      .info-label {
+        width: auto;
+      }
+
+      .info-value,
+      .info-value.tracking {
+        width: 100%;
+        justify-content: flex-start;
+        text-align: left;
+      }
+    }
+
+    .tracking-timeline {
+      .track-item {
+        display: grid;
+        grid-template-columns: 20px minmax(0, 1fr);
+        column-gap: 12px;
+        row-gap: 3px;
+
+        .track-dot-col {
+          grid-row: 1 / span 2;
+        }
+
+        .track-time {
+          width: auto;
+          grid-column: 2;
+          padding-top: 0;
+        }
+
+        .track-info {
+          grid-column: 2;
+          min-width: 0;
+        }
+      }
+    }
+  }
+}
 </style>

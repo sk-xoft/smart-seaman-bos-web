@@ -344,4 +344,97 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.page-list {
+  .card-body {
+    min-width: 0;
+  }
+
+  .filter-tabs {
+    scrollbar-width: thin;
+    scrollbar-color: #4b5563 transparent;
+  }
+
+  table {
+    min-width: 980px;
+
+    th,
+    td {
+      vertical-align: middle;
+    }
+
+    tbody tr {
+      transition: background-color 0.2s;
+
+      &:hover td {
+        background: #1a2840;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .page-list {
+    .card-body {
+      padding: 16px;
+    }
+
+    .filter-tabs {
+      gap: 6px;
+      margin-bottom: 12px;
+    }
+
+    .tab-btn {
+      padding: 6px 10px;
+      font-size: 12px;
+    }
+
+    table {
+      min-width: 860px;
+      font-size: 12px;
+
+      th,
+      td {
+        padding: 10px 8px;
+      }
+    }
+
+    .pagination-section {
+      align-items: flex-start;
+      gap: 12px;
+    }
+
+    .pagination-controls {
+      width: 100%;
+      justify-content: space-between;
+      gap: 8px;
+    }
+
+    .page-numbers {
+      overflow-x: auto;
+      max-width: 100%;
+      padding-bottom: 4px;
+    }
+
+    .pagination-hint {
+      display: none;
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .page-list {
+    .card-body {
+      padding: 14px;
+    }
+
+    .pagination-controls {
+      flex-wrap: wrap;
+    }
+
+    .page-numbers {
+      order: 3;
+      width: 100%;
+    }
+  }
+}
 </style>

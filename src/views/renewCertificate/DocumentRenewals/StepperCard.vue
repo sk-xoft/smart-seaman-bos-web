@@ -264,4 +264,94 @@ export default {
     border-top-color: #16a34a;
   }
 }
+
+@media (max-width: 1024px) {
+  .stepper-content {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr);
+    gap: 20px;
+  }
+
+  .stepper-info {
+    flex: none;
+    width: 100%;
+  }
+
+  .divider {
+    display: none;
+  }
+
+  .stepper {
+    min-height: 0;
+  }
+}
+
+@media (max-width: 768px) {
+  .stepper-card {
+    padding: 16px;
+    margin-bottom: 12px;
+  }
+
+  .stepper-content {
+    gap: 16px;
+  }
+
+  .stepper-info {
+    .info-block {
+      margin-bottom: 12px;
+
+      .info-value {
+        font-size: 15px;
+        overflow-wrap: anywhere;
+      }
+    }
+
+    .info-grid {
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      gap: 12px;
+
+      & > div .info-value,
+      .status-badge {
+        overflow-wrap: anywhere;
+        word-break: break-word;
+      }
+    }
+  }
+
+  .stepper {
+    width: 100%;
+    justify-content: flex-start;
+    overflow-x: auto;
+    padding-bottom: 6px;
+    -webkit-overflow-scrolling: touch;
+
+    .stepper-container {
+      min-width: 500px;
+    }
+  }
+
+  .step-dash {
+    min-width: 28px;
+  }
+}
+
+@media (max-width: 480px) {
+  .stepper-card {
+    padding: 14px;
+  }
+
+  .stepper-info .info-grid {
+    grid-template-columns: 1fr 1fr;
+
+    & > div:last-child {
+      grid-column: 1 / -1;
+    }
+  }
+
+  .stepper {
+    .stepper-container {
+      min-width: 460px;
+    }
+  }
+}
 </style>

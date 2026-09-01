@@ -25,9 +25,9 @@
       <tbody>
         <tr v-for="doc in documents" :key="doc.id" :id="`doc-row-${doc.id}`">
           <td>{{ doc.id }}</td>
-          <td>
+          <td class="document-name-cell">
             <span class="doc-name">{{ doc.n }}</span>
-            <span v-if="doc.upd" class="updated-badge">อัปเดตใหม่</span>
+            <span v-if="showUpdatedBadges && doc.upd" class="updated-badge">อัปเดตใหม่</span>
           </td>
           <td>
             <select 
@@ -161,6 +161,10 @@ export default {
       default: false
     },
     inspectionActionsDisabled: {
+      type: Boolean,
+      default: false
+    },
+    showUpdatedBadges: {
       type: Boolean,
       default: false
     },
@@ -441,6 +445,10 @@ export default {
         color: #d1d5db;
         vertical-align: middle;
 
+        &.document-name-cell {
+          overflow-wrap: anywhere;
+        }
+
         .doc-name {
           color: #e2e8f0;
           font-weight: 500;
@@ -454,6 +462,8 @@ export default {
           font-size: 10px;
           font-weight: 600;
           margin-left: 4px;
+          display: inline-block;
+          white-space: nowrap;
         }
 
         .result-select {

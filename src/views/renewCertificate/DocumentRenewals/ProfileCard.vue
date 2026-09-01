@@ -254,4 +254,131 @@ export default {
     font-size: 10px;
   }
 }
+
+.profile-name,
+.info-value,
+.address-text {
+  min-width: 0;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+@media (max-width: 1024px) {
+  .profile-container {
+    display: grid;
+    grid-template-columns: minmax(180px, 0.7fr) minmax(0, 1.3fr);
+    gap: 20px 24px;
+  }
+
+  .profile-avatar-section {
+    padding: 12px 0;
+  }
+
+  .divider {
+    display: none;
+  }
+
+  .delivery-address {
+    grid-column: 1 / -1;
+    padding-top: 20px;
+    border-top: 1px solid #1e293b;
+  }
+}
+
+@media (max-width: 768px) {
+  .card {
+    margin-bottom: 12px;
+  }
+
+  .profile-container {
+    display: flex;
+    flex-direction: column;
+    gap: 20px;
+  }
+
+  .profile-avatar-section {
+    flex-direction: row;
+    justify-content: flex-start;
+    padding: 0 0 20px;
+    border-bottom: 1px solid #1e293b;
+
+    .avatar {
+      width: 60px;
+      height: 60px;
+      flex: 0 0 60px;
+      font-size: 20px;
+    }
+
+    .profile-name {
+      text-align: left;
+
+      .full-name {
+        font-size: 14px;
+      }
+    }
+  }
+
+  .profile-info {
+    width: 100%;
+
+    .info-row {
+      gap: 12px;
+      padding: 9px 0;
+    }
+
+    .info-label {
+      width: 112px;
+      font-size: 12px;
+    }
+
+    .info-value {
+      flex: 1;
+      font-size: 12px;
+      text-align: right;
+    }
+  }
+
+  .delivery-address {
+    padding-top: 20px;
+  }
+
+  .address-header {
+    gap: 12px;
+  }
+
+  .btn-copy {
+    min-height: 32px;
+    padding: 5px 9px;
+    flex-shrink: 0;
+  }
+}
+
+@media (max-width: 420px) {
+  .profile-info {
+    .info-row {
+      flex-direction: column;
+      gap: 3px;
+    }
+
+    .info-label {
+      width: auto;
+    }
+
+    .info-value {
+      width: 100%;
+      text-align: left;
+    }
+  }
+
+  .delivery-address {
+    .address-header {
+      align-items: flex-start;
+    }
+
+    .address-text {
+      font-size: 12px;
+      line-height: 1.7;
+    }
+  }
+}
 </style>

@@ -1,9 +1,14 @@
 <template>
   <div class="tab-content">
     <div class="edit-mode">
-      <div v-if="request.resubmit" class="resubmit-badge">
-        <i class="light-icon-refresh"></i> ผู้ยื่นแก้ไขและส่งกลับมาแล้ว
-        <span class="date">อัปเดตเมื่อ {{ request.date }}</span>
+      <div v-if="request.resubmit" class="resubmit-notice">
+        <span class="resubmit-notice__badge">
+          <i class="light-icon-refresh"></i>
+          ผู้ยื่นแก้ไขและส่งกลับมาแล้ว
+        </span>
+        <span v-if="request.resubmittedAt" class="resubmit-notice__time">
+          อัปเดตเมื่อ {{ request.resubmittedAt }}
+        </span>
       </div>
 
       <div class="documents-header">
@@ -20,6 +25,7 @@
         :uploadable="isUploadable"
         :inspectionPending="isPaymentPending"
         :inspectionActionsDisabled="isPaymentPending"
+        :showUpdatedBadges="request.resubmit && isInspectionStep"
         :initialResults="docResults"
         @save="saveDocuments"
         @changed="onDocumentsChanged"
@@ -248,26 +254,33 @@ export default {
 
 .edit-mode,
 .view-mode {
-  .resubmit-badge {
+  .resubmit-notice {
     display: flex;
     align-items: center;
     gap: 10px;
+    flex-wrap: wrap;
     margin-bottom: 14px;
-    background: #1e3a5f;
-    color: #60a5fa;
-    border-radius: 6px;
-    padding: 5px 12px;
-    font-size: 12px;
-    font-weight: 600;
 
-    i {
+    &__badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      min-height: 32px;
+      padding: 5px 12px;
+      border-radius: 6px;
+      background: #1e3a5f;
+      color: #60a5fa;
+      font-size: 12px;
+      font-weight: 600;
+    }
+
+    &__badge i {
       font-size: 14px;
     }
 
-    .date {
+    &__time {
       font-size: 12px;
       color: #6b7280;
-      margin-left: auto;
     }
   }
 }

@@ -89,7 +89,7 @@
               
               <div class="form-group">
                 <label class="form-label">วันที่สามารถรับเอกสารได้ตั้งแต่ <span class="subtitle">(แก้ไขได้)</span></label>
-                <div style="display: flex; gap: 10px; align-items: center">
+                <div class="form-action-row pickup-date-actions">
                   <input v-model="availablePickupDate" type="date" class="date-input">
                   <button class="btn btn-ghost" @click="savePickupDateChange">
                     <i class="ti ti-device-floppy"></i> บันทึกการเปลี่ยนแปลง
@@ -116,8 +116,8 @@
                   <input v-model="trackingNo" type="text" class="form-input" placeholder="เช่น EF123456789TH">
                 </div>
 
-                <div style="display: flex; align-items: flex-end; gap: 12px">
-                  <div style="flex: 1">
+                <div class="form-action-row delivery-actions">
+                  <div class="delivery-date-field">
                     <label class="form-label">วันที่จัดส่ง <span class="required">*</span></label>
                     <input v-model="shippedDate" type="date" class="date-input">
                   </div>
@@ -424,6 +424,21 @@ export default {
     padding-top: 16px;
     margin-top: 16px;
   }
+
+  .form-action-row {
+    display: flex;
+    align-items: flex-end;
+    gap: 12px;
+  }
+
+  .pickup-date-actions {
+    align-items: center;
+  }
+
+  .delivery-date-field {
+    flex: 1;
+    min-width: 0;
+  }
 }
 
 .btn {
@@ -466,6 +481,124 @@ export default {
 
     i {
       font-size: 14px;
+    }
+  }
+}
+
+@media (max-width: 1024px) {
+  .dept-content {
+    .phase-container .panel-layout {
+      flex-direction: column;
+      gap: 24px;
+
+      .left-panel,
+      .right-panel {
+        width: 100%;
+        padding: 0;
+      }
+
+      .left-panel {
+        flex: none;
+        padding-bottom: 24px;
+        border-right: none;
+        border-bottom: 1px solid #1e293b;
+      }
+    }
+  }
+}
+
+@media (max-width: 768px) {
+  .tab-content {
+    padding: 12px 0;
+  }
+
+  .empty-state {
+    padding: 32px 16px;
+  }
+
+  .dept-content {
+    .phase-container {
+      .panel-layout {
+        gap: 20px;
+
+        .left-panel {
+          padding-bottom: 20px;
+        }
+      }
+
+      .info-rows {
+        .info-row {
+          gap: 12px;
+          padding: 9px 0;
+        }
+
+        .info-label {
+          width: 140px;
+          font-size: 12px;
+        }
+
+        .info-value {
+          flex: 1;
+          min-width: 0;
+          font-size: 12px;
+          text-align: right;
+          overflow-wrap: anywhere;
+          word-break: break-word;
+        }
+      }
+
+      .info-grid {
+        gap: 12px;
+
+        .info-value {
+          overflow-wrap: anywhere;
+          word-break: break-word;
+        }
+      }
+    }
+  }
+}
+
+@media (max-width: 480px) {
+  .dept-content {
+    .phase-container {
+      .info-rows {
+        .info-row {
+          flex-direction: column;
+          gap: 3px;
+        }
+
+        .info-label {
+          width: auto;
+        }
+
+        .info-value {
+          width: 100%;
+          text-align: left;
+        }
+      }
+
+      .info-grid {
+        grid-template-columns: 1fr;
+      }
+
+      .form-action-row {
+        flex-direction: column;
+        align-items: stretch;
+
+        .btn,
+        .date-input {
+          width: 100%;
+        }
+
+        .btn {
+          justify-content: center;
+        }
+      }
+
+      .pickup-date-actions {
+        align-items: stretch;
+      }
     }
   }
 }

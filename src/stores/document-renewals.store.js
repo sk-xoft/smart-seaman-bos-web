@@ -6,6 +6,7 @@ import { REQUESTS } from '@/constants/documentRequests';
 
 const baseUrl = import.meta.env.VITE_BASE_URL_API;
 const MENU_CODE = 'OPER104';
+const BANGKOK_TIME_ZONE = 'Asia/Bangkok';
 
 function buildHeaders(token) {
     const headers = {
@@ -32,7 +33,7 @@ function normalizeRequest(item) {
         pos: item.pos ?? item.position ?? item.mobile_user_position_name_th ?? '-',
         doc: item.doc ?? item.documentName ?? item.documentType ?? item.document_display_name ?? item.document_name_th ?? '-',
         status: item.status ?? item.requestStatus ?? item.document_status_name_th ?? item.document_status_name ?? '-',
-        date: item.date ?? item.requestDate ?? item.submitted_at ?? item.created_at ?? item.createdAt ?? '-',
+        date: formatDateTime(item.date ?? item.requestDate ?? item.submitted_at ?? item.created_at ?? item.createdAt),
         amt: item.amt ?? item.amount ?? item.paymentAmount ?? '-',
         resubmit: item.resubmit ?? item.isResubmit ?? item.is_resubmit ?? false,
     };
@@ -66,14 +67,14 @@ function parseDateValue(value) {
         const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
         if (match) {
             const [, year, month, day, hours = '00', minutes = '00', seconds = '00'] = match;
-            return new Date(
+            return new Date(Date.UTC(
                 Number(year),
                 Number(month) - 1,
                 Number(day),
                 Number(hours),
                 Number(minutes),
                 Number(seconds),
-            );
+            ));
         }
     }
 
@@ -91,13 +92,15 @@ function formatDateTime(value) {
         return value;
     }
 
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    const hours = String(date.getHours()).padStart(2, '0');
-    const minutes = String(date.getMinutes()).padStart(2, '0');
-
-    return `${day}/${month}/${year} ${hours}:${minutes}`;
+    return new Intl.DateTimeFormat('en-GB', {
+        timeZone: BANGKOK_TIME_ZONE,
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23',
+    }).format(date).replace(',', '');
 }
 
 function normalizeDeptSubmission(deptSubmission) {
@@ -146,10 +149,12 @@ function formatDate(value) {
         return value;
     }
 
-    const day = String(date.getDate()).padStart(2, '0');
-    const month = String(date.getMonth() + 1).padStart(2, '0');
-    const year = date.getFullYear();
-    return `${day}/${month}/${year}`;
+    return new Intl.DateTimeFormat('en-GB', {
+        timeZone: BANGKOK_TIME_ZONE,
+        day: '2-digit',
+        month: '2-digit',
+        year: 'numeric',
+    }).format(date);
 }
 
 function normalizeDeptResult(deptResult) {
@@ -309,6 +314,7 @@ function normalizeDetailResponse(responseData, requestNo, currentRequests = []) 
     const normalizedStepper = normalizeStepper(stepperInput, fallbackStatus);
 
     const attachmentResults = buildAttachmentResults(attachments);
+    const rawResubmittedAt = responseData.resubmittedAt ?? responseData.resubmitted_at ?? null;
 
     return {
         no: responseData.requestNo ?? requestFromList?.no ?? '-',
@@ -321,6 +327,7 @@ function normalizeDetailResponse(responseData, requestNo, currentRequests = []) 
         status: normalizedStepper?.statusLabel ?? fallbackStatus,
         // support both old (dateOfSubmission) and new (submittedAt) date key
         date: responseData.dateOfSubmission ?? responseData.submittedAt ?? requestFromList?.date ?? '-',
+        resubmittedAt: rawResubmittedAt ? formatDateTime(rawResubmittedAt) : null,
         amt: responseData.amount != null ? String(responseData.amount) : (requestFromList?.amt ?? '-'),
         resubmit: responseData.isResubmit ?? requestFromList?.resubmit ?? false,
         dob: profile.dateOfBirth ?? profile.DATE_OF_BIRTH ?? '-',
