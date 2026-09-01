@@ -57,7 +57,9 @@
                   <th class="bg-base-300 whitespace-normal p-3">ตำแหน่ง</th>
                   <th class="bg-base-300 whitespace-normal p-3">เอกสาร</th>
                   <th class="bg-base-300 whitespace-normal p-3">สถานะ</th>
-                  <th class="bg-base-300 whitespace-normal p-3">วันที่ยื่น</th>
+                  <th class="bg-base-300 whitespace-normal p-3">
+                    {{ store.currentFilter === 'ยกเลิก' ? 'วันที่ยกเลิก' : 'วันที่ยื่น' }}
+                  </th>
                   <th class="bg-base-300 whitespace-normal p-3">ยอดชำระ</th>
                 </tr>
               </thead>
@@ -78,7 +80,9 @@
                     <span class="status-badge" :style="{ color: statusColors[req.status] }">{{ req.status }}</span>
                     <span v-if="req.resubmit" class="resubmit-badge">ผู้ยื่น resubmit</span>
                   </td>
-                  <td class="whitespace-normal p-3">{{ req.date }}</td>
+                  <td class="whitespace-normal p-3">
+                    {{ store.currentFilter === 'ยกเลิก' ? (req.cancelledAt || '-') : req.date }}
+                  </td>
                   <td class="whitespace-normal p-3">{{ req.amt }}</td>
                 </tr>
               </tbody>
