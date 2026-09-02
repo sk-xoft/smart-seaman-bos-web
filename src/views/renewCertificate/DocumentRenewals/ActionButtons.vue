@@ -10,7 +10,7 @@
         <button class="btn btn-outline" :disabled="disabled || !canSendBack" @click="$emit('send-back')">
           <i class="light-icon-arrow-back"></i> ส่งกลับให้แก้ไข
         </button>
-        <button class="btn btn-primary" :disabled="disabled || !canSubmit" @click="$emit('submit')">
+        <button v-if="showSubmit" class="btn btn-primary" :disabled="disabled || !canSubmit" @click="$emit('submit')">
           <i class="light-icon-send"></i> ยื่นกรมเจ้าท่าแล้ว
         </button>
       </div>
@@ -43,6 +43,10 @@ export default {
       default: false
     },
     showCancel: {
+      type: Boolean,
+      default: true
+    },
+    showSubmit: {
       type: Boolean,
       default: true
     }

@@ -1,13 +1,8 @@
 <template>
   <div class="tab-content">
-    <div v-if="request.status === 'รอตรวจเอกสาร'" class="empty-state">
-      <i class="ti ti-clock"></i>
+    <div v-if="!showDeptContent" class="empty-state">
+      <i class="light-icon-clock"></i>
       <span>ยังไม่มีข้อมูลผลจากกรมเจ้าท่า</span>
-    </div>
-
-    <div v-else-if="request.status === 'รอผู้ยื่นแก้ไข'" class="empty-state">
-      <i class="ti ti-clock"></i>
-      <span>ยังไม่มีข้อมูล</span>
     </div>
 
     <div v-else class="dept-content">
@@ -36,9 +31,11 @@
             <div class="panel-title">บันทึกผลจากกรม</div>
             <div class="form-group">
               <label class="form-label">วันที่สามารถรับเอกสารได้ตั้งแต่ <span class="required">*</span></label>
-              <div class="date-wrapper">
-                <input v-model="availablePickupDate" type="date" class="date-input">
-              </div>
+              <VueDatePicker v-model="availablePickupDate" v-bind="dateTimePickerProps" :format="formatThaiDateTime">
+                <template #input-icon>
+                  <i class="light-icon-calendar" aria-hidden="true"></i>
+                </template>
+              </VueDatePicker>
             </div>
             <button class="btn btn-primary" @click="saveDeptResult">
               <i class="ti ti-device-floppy"></i> บันทึกผลจากกรม
@@ -50,7 +47,25 @@
 
         <div>
           <div class="panel-title">รายการเอกสารประกอบ <span class="subtitle">(แก้ไขได้หากกรมแจ้งให้ปรับ)</span></div>
-          <!-- DocumentTable here -->
+          <DocumentTable
+            :documents="documents"
+            :requestNo="request.no"
+            editable
+            uploadable
+            :initialResults="docResults"
+            @save="saveDocuments"
+            @changed="onDocumentsChanged"
+            @upload-file="$emit('upload-file', $event)"
+          />
+          <ActionButtons
+            :docsSaved="docsSaved"
+            :allAnswered="allAnswered"
+            :allPass="allPass"
+            :hasFix="hasFix"
+            :showSubmit="false"
+            @cancel="requestAction('cancel')"
+            @send-back="requestAction('sendback')"
+          />
         </div>
       </div>
 
@@ -90,7 +105,11 @@
               <div class="form-group">
                 <label class="form-label">วันที่สามารถรับเอกสารได้ตั้งแต่ <span class="subtitle">(แก้ไขได้)</span></label>
                 <div class="form-action-row pickup-date-actions">
-                  <input v-model="availablePickupDate" type="date" class="date-input">
+                  <VueDatePicker v-model="availablePickupDate" v-bind="dateTimePickerProps" :format="formatThaiDateTime">
+                    <template #input-icon>
+                      <i class="light-icon-calendar" aria-hidden="true"></i>
+                    </template>
+                  </VueDatePicker>
                   <button class="btn btn-ghost" @click="savePickupDateChange">
                     <i class="ti ti-device-floppy"></i> บันทึกการเปลี่ยนแปลง
                   </button>
@@ -100,11 +119,17 @@
               <div style="border-top: 1px solid #1e293b; padding-top: 14px">
                 <div class="form-group">
                   <label class="form-label">วันที่รับเอกสาร <span class="required">*</span></label>
-                  <input v-model="receivedDate" type="date" class="date-input">
+                  <div class="form-action-row pickup-date-actions">
+                    <VueDatePicker v-model="receivedDate" v-bind="dateTimePickerProps" :format="formatThaiDateTime">
+                      <template #input-icon>
+                        <i class="light-icon-calendar" aria-hidden="true"></i>
+                      </template>
+                    </VueDatePicker>
+                    <button class="btn btn-primary" @click="saveReceiveDoc">
+                      <i class="ti ti-check"></i> บันทึกรับเอกสาร
+                    </button>
+                  </div>
                 </div>
-                <button class="btn btn-primary" @click="saveReceiveDoc">
-                  <i class="ti ti-check"></i> บันทึกรับเอกสาร
-                </button>
               </div>
 
               <div style="border-top: 1px solid #1e293b; padding-top: 14px; margin-top: 14px">
@@ -119,7 +144,11 @@
                 <div class="form-action-row delivery-actions">
                   <div class="delivery-date-field">
                     <label class="form-label">วันที่จัดส่ง <span class="required">*</span></label>
-                    <input v-model="shippedDate" type="date" class="date-input">
+                    <VueDatePicker v-model="shippedDate" v-bind="dateTimePickerProps" :format="formatThaiDateTime">
+                      <template #input-icon>
+                        <i class="light-icon-calendar" aria-hidden="true"></i>
+                      </template>
+                    </VueDatePicker>
                   </div>
                   <button class="btn btn-primary" @click="saveDeliveryInfo">
                     <i class="ti ti-send"></i> บันทึกข้อมูลจัดส่ง
@@ -151,30 +180,95 @@
             </div>
           </div>
         </div>
+
+        <template v-if="['รอรับเอกสารจากกรม', 'กำลังจัดส่ง', 'จัดส่งสำเร็จ'].includes(request.status)">
+          <div class="divider"></div>
+
+          <div class="view-only-documents">
+            <div class="panel-title">
+              รายการเอกสารประกอบ
+              <span class="subtitle"><i class="light-icon-lock"></i> view only</span>
+            </div>
+            <div class="view-only-label">
+              <i class="light-icon-lock"></i>
+              <span>ผ่านการตรวจแล้ว — view only</span>
+            </div>
+            <DocumentTable
+              :documents="documents"
+              :requestNo="request.no"
+              :initialResults="docResults"
+            />
+          </div>
+        </template>
       </div>
     </div>
   </div>
 </template>
 
 <script>
+import DocumentTable from './DocumentTable.vue'
+import ActionButtons from './ActionButtons.vue'
+
 export default {
   name: 'DeptTab',
+  components: { DocumentTable, ActionButtons },
   props: {
     request: {
       type: Object,
       required: true
     }
   },
-  emits: ['save-dept-result', 'save-pickup-change', 'save-receive-doc', 'save-delivery-info'],
+  emits: ['save-dept-result', 'save-pickup-change', 'save-receive-doc', 'save-delivery-info', 'documents-saved', 'upload-file', 'request-action'],
   data() {
     return {
       availablePickupDate: '',
       receivedDate: '',
       trackingNo: '',
-      shippedDate: ''
+      shippedDate: '',
+      docResults: {},
+      docsSaved: false
     }
   },
   computed: {
+    dateTimePickerProps() {
+      return {
+        locale: 'th',
+        dark: true,
+        clearable: false,
+        enableTimePicker: true,
+        showNowButton: true,
+        nowButtonLabel: 'ตอนนี้',
+        selectText: 'เลือก',
+        cancelText: 'ยกเลิก'
+      }
+    },
+    showDeptContent() {
+      const supportedStatuses = ['รอผลกรมเจ้าท่า', 'รอรับเอกสารจากกรม', 'กำลังจัดส่ง', 'จัดส่งสำเร็จ']
+      const supportedStatusCodes = [
+        'PENDING_MARINE_DEPARTMENT_RESULT',
+        'PENDING_DEPARTMENT_RESULT',
+        'PENDING_DEPARTMENT_DOCUMENT_PICKUP',
+        'PENDING_DEPARTMENT_PICKUP',
+        'DELIVERING',
+        'DELIVERED'
+      ]
+      const statusCode = this.request?.stepper?.statusCode?.toUpperCase()
+
+      return (supportedStatuses.includes(this.request.status) || supportedStatusCodes.includes(statusCode))
+        && Boolean(this.request.deptSubmission || this.request.deptResult)
+    },
+    documents() {
+      return Array.isArray(this.request.documents) ? this.request.documents : []
+    },
+    allAnswered() {
+      return this.documents.every(doc => this.docResults[doc.id]?.result)
+    },
+    allPass() {
+      return this.documents.every(doc => this.docResults[doc.id]?.result === 'pass')
+    },
+    hasFix() {
+      return this.documents.some(doc => this.docResults[doc.id]?.result === 'fix')
+    },
     deptSubmission() {
       return this.request.deptSubmission ?? {
         submittedAt: '-',
@@ -205,23 +299,78 @@ export default {
       immediate: true,
       deep: true,
       handler() {
-        this.availablePickupDate = this.request?.deptResult?.availablePickupDateValue ?? ''
-        this.receivedDate = this.request?.deptResult?.receivedDateValue ?? ''
+        this.initializeDocResults()
+        this.availablePickupDate = this.toPickerDate(this.request?.deptResult?.availablePickupDateValue)
+        this.receivedDate = this.toPickerDate(this.request?.deptResult?.receivedDateValue)
         this.trackingNo = this.request?.deliveryInfo?.trackingNo && this.request?.deliveryInfo?.trackingNo !== '-'
           ? this.request.deliveryInfo.trackingNo
           : ''
-        this.shippedDate = this.request?.deliveryInfo?.shippedDateValue ?? ''
+        this.shippedDate = this.toPickerDate(this.request?.deliveryInfo?.shippedDateValue)
       }
     }
   },
   methods: {
+    toPickerDate(value) {
+      if (!value) return null
+      if (value instanceof Date) return Number.isNaN(value.getTime()) ? null : value
+
+      const match = String(value).match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/)
+      if (!match) return null
+
+      const [, year, month, day, hours = '00', minutes = '00', seconds = '00'] = match
+      return new Date(Number(year), Number(month) - 1, Number(day), Number(hours), Number(minutes), Number(seconds))
+    },
+    formatThaiDateTime(value) {
+      if (!(value instanceof Date) || Number.isNaN(value.getTime())) return ''
+
+      return new Intl.DateTimeFormat('th-TH-u-ca-buddhist', {
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit',
+        hourCycle: 'h23'
+      }).format(value)
+    },
+    formatApiDateTime(value) {
+      if (!(value instanceof Date) || Number.isNaN(value.getTime())) return ''
+      const pad = number => String(number).padStart(2, '0')
+
+      return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())} ${pad(value.getHours())}:${pad(value.getMinutes())}:${pad(value.getSeconds())}`
+    },
+    requestAction(action) {
+      this.$emit('request-action', action)
+    },
+    initializeDocResults() {
+      this.docResults = Object.fromEntries(this.documents.map(doc => [
+        doc.id,
+        { ...(this.request.attachmentResults?.[doc.id] ?? { result: '', note: '' }) }
+      ]))
+      this.docsSaved = this.documents.length > 0 && this.documents.every(doc => {
+        const inspection = this.docResults[doc.id]
+        return inspection.result === 'pass'
+          || (inspection.result === 'fix' && inspection.note.trim() !== '')
+      })
+    },
+    onDocumentsChanged(results) {
+      this.docResults = results
+      this.docsSaved = false
+    },
+    saveDocuments(results, complete) {
+      this.docResults = results
+      this.docsSaved = false
+      this.$emit('documents-saved', results, (saved) => {
+        this.docsSaved = saved
+        complete(saved)
+      })
+    },
     saveDeptResult() {
       if (!this.availablePickupDate) {
         return
       }
 
       this.$emit('save-dept-result', {
-        availablePickupDate: this.availablePickupDate
+        availablePickupDate: this.formatApiDateTime(this.availablePickupDate)
       })
     },
     savePickupDateChange() {
@@ -230,7 +379,7 @@ export default {
       }
 
       this.$emit('save-pickup-change', {
-        availablePickupDate: this.availablePickupDate
+        availablePickupDate: this.formatApiDateTime(this.availablePickupDate)
       })
     },
     saveReceiveDoc() {
@@ -239,7 +388,7 @@ export default {
       }
 
       this.$emit('save-receive-doc', {
-        receivedDate: this.receivedDate
+        receivedDate: this.formatApiDateTime(this.receivedDate)
       })
     },
     saveDeliveryInfo() {
@@ -249,7 +398,7 @@ export default {
 
       this.$emit('save-delivery-info', {
         trackingNo: this.trackingNo,
-        shippedDate: this.shippedDate
+        shippedDate: this.formatApiDateTime(this.shippedDate)
       })
     }
   }
@@ -373,28 +522,35 @@ export default {
       margin-bottom: 12px;
     }
 
-    .date-wrapper {
-      background: #0d1520;
-      border: 1px solid #2a3a4a;
-      border-radius: 5px;
-      padding: 0 10px;
-      height: 40px;
-      display: flex;
-      align-items: center;
+    :deep(.dp__main) {
+      flex: 1;
+      min-width: 0;
     }
 
-    .date-input {
-      background: transparent;
-      border: none;
+    :deep(.dp__input) {
+      height: 40px;
+      border-color: #2a3a4a;
+      background: #0d1520;
       color: #e2e8f0;
+      font-family: 'Prompt', sans-serif;
       font-size: 13px;
-      width: 100%;
-      
-      outline: none;
+      padding-left: 12px;
+      padding-right: 48px;
+    }
 
-      &::placeholder {
-        color: #374151;
-      }
+    :deep(.dp__input_icon) {
+      left: auto;
+      right: 0;
+      width: 40px;
+      height: 38px;
+      padding: 0;
+      border-left: 1px solid #2a3a4a;
+      color: #9ca3af;
+      font-size: 16px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      pointer-events: none;
     }
 
     .form-input {
@@ -420,9 +576,21 @@ export default {
   }
 
   .divider {
-    border-top: 1px solid #1e293b;
-    padding-top: 16px;
-    margin-top: 16px;
+    margin: 16px 0;
+    // border-top: 1px solid #1e293b;
+  }
+
+  .view-only-label {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    margin-bottom: 12px;
+    color: #6b7280;
+    font-size: 12px;
+
+    i {
+      font-size: 14px;
+    }
   }
 
   .form-action-row {

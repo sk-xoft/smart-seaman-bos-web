@@ -3,10 +3,10 @@ import axios from 'axios';
 import { useAuthStore } from '@/stores';
 import { uuid } from 'vue-uuid';
 import { REQUESTS } from '@/constants/documentRequests';
+import { formatThaiDate, formatThaiDateTime } from '@/helpers/date-format';
 
 const baseUrl = import.meta.env.VITE_BASE_URL_API;
 const MENU_CODE = 'OPER104';
-const BANGKOK_TIME_ZONE = 'Asia/Bangkok';
 
 function buildHeaders(token) {
     const headers = {
@@ -33,8 +33,8 @@ function normalizeRequest(item) {
         pos: item.pos ?? item.position ?? item.mobile_user_position_name_th ?? '-',
         doc: item.doc ?? item.documentName ?? item.documentType ?? item.document_display_name ?? item.document_name_th ?? '-',
         status: item.status ?? item.requestStatus ?? item.document_status_name_th ?? item.document_status_name ?? '-',
-        date: formatDateTime(item.date ?? item.requestDate ?? item.submitted_at ?? item.created_at ?? item.createdAt),
-        cancelledAt: formatShortBangkokDateTime(item.cancelledAt ?? item.cancelled_at),
+        date: formatThaiDateTime(item.date ?? item.requestDate ?? item.submitted_at ?? item.created_at ?? item.createdAt),
+        cancelledAt: formatThaiDateTime(item.cancelledAt ?? item.cancelled_at),
         amt: item.amt ?? item.amount ?? item.paymentAmount ?? '-',
         resubmit: item.resubmit ?? item.isResubmit ?? item.is_resubmit ?? false,
     };
@@ -54,92 +54,6 @@ function buildAddressText(deliverAddress) {
     return parts.length ? parts.join(' ') : '-';
 }
 
-function parseDateValue(value) {
-    if (!value) {
-        return null;
-    }
-
-    if (value instanceof Date) {
-        return Number.isNaN(value.getTime()) ? null : value;
-    }
-
-    if (typeof value === 'string') {
-        const normalized = value.trim();
-        const match = normalized.match(/^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2})(?::(\d{2}))?)?$/);
-        if (match) {
-            const [, year, month, day, hours = '00', minutes = '00', seconds = '00'] = match;
-            return new Date(Date.UTC(
-                Number(year),
-                Number(month) - 1,
-                Number(day),
-                Number(hours),
-                Number(minutes),
-                Number(seconds),
-            ));
-        }
-    }
-
-    const parsedDate = new Date(value);
-    return Number.isNaN(parsedDate.getTime()) ? null : parsedDate;
-}
-
-function formatDateTime(value) {
-    if (!value) {
-        return '-';
-    }
-
-    const date = parseDateValue(value);
-    if (!date) {
-        return value;
-    }
-
-    return new Intl.DateTimeFormat('en-GB', {
-        timeZone: BANGKOK_TIME_ZONE,
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit',
-        hourCycle: 'h23',
-    }).format(date).replace(',', '');
-}
-
-function formatShortBangkokDateTime(value) {
-    if (!value) {
-        return null;
-    }
-
-    if (typeof value === 'string') {
-        const normalized = value.trim();
-        const displayDateMatch = normalized.match(/^(\d{2})\/(\d{2})\/(\d{2}|\d{4})\s+(\d{2}):(\d{2})$/);
-        if (displayDateMatch) {
-            const [, day, month, year, hours, minutes] = displayDateMatch;
-            return `${day}/${month}/${year.slice(-2)} ${hours}:${minutes}`;
-        }
-
-        const bangkokLocalMatch = normalized.match(/^(\d{4})-(\d{2})-(\d{2})[ T](\d{2}):(\d{2})(?::\d{2}(?:\.\d+)?)?$/);
-        if (bangkokLocalMatch) {
-            const [, year, month, day, hours, minutes] = bangkokLocalMatch;
-            return `${day}/${month}/${year.slice(-2)} ${hours}:${minutes}`;
-        }
-    }
-
-    const date = parseDateValue(value);
-    if (!date) {
-        return value;
-    }
-
-    return new Intl.DateTimeFormat('en-GB', {
-        timeZone: BANGKOK_TIME_ZONE,
-        day: '2-digit',
-        month: '2-digit',
-        year: '2-digit',
-        hour: '2-digit',
-        minute: '2-digit',
-        hourCycle: 'h23',
-    }).format(date).replace(',', '');
-}
-
 function normalizeDeptSubmission(deptSubmission) {
     if (!deptSubmission) {
         return null;
@@ -154,7 +68,7 @@ function normalizeDeptSubmission(deptSubmission) {
         ?? '-';
 
     return {
-        submittedAt: formatDateTime(
+        submittedAt: formatThaiDateTime(
             deptSubmission.actionedAt
                 ?? deptSubmission.actioned_at
                 ?? deptSubmission.submittedToDeptDate
@@ -172,28 +86,6 @@ function normalizeDeptSubmission(deptSubmission) {
     };
 }
 
-function formatDate(value) {
-    if (!value) {
-        return '-';
-    }
-
-    const date = parseDateValue(value);
-    if (!date) {
-        if (/^\d{4}-\d{2}-\d{2}$/.test(value)) {
-            const [year, month, day] = value.split('-');
-            return `${day}/${month}/${year}`;
-        }
-        return value;
-    }
-
-    return new Intl.DateTimeFormat('en-GB', {
-        timeZone: BANGKOK_TIME_ZONE,
-        day: '2-digit',
-        month: '2-digit',
-        year: 'numeric',
-    }).format(date);
-}
-
 function normalizeDeptResult(deptResult) {
     if (!deptResult) {
         return null;
@@ -204,16 +96,16 @@ function normalizeDeptResult(deptResult) {
         ?? '-';
 
     return {
-        availablePickupDate: formatDate(deptResult.note),
+        availablePickupDate: formatThaiDateTime(deptResult.note),
         availablePickupDateValue: deptResult.note ?? '',
-        recordedAt: formatDateTime(deptResult.actioned_at),
+        recordedAt: formatThaiDateTime(deptResult.actioned_at),
         operatorName: deptResult.actioned_by_username
             ?? [deptResult.actioned_by_first_name, deptResult.actioned_by_last_name].filter(Boolean).join(' ')
             ?? '-',
         operatorPhone: deptResult.actioned_by_mobile_number ?? '-',
-        receivedDate: formatDate(deptResult.received_date),
+        receivedDate: formatThaiDateTime(deptResult.received_date),
         receivedDateValue: deptResult.received_date ?? '',
-        receivedRecordedAt: formatDateTime(deptResult.received_actioned_at),
+        receivedRecordedAt: formatThaiDateTime(deptResult.received_actioned_at),
         receivedOperatorName: receivedOperatorName || '-',
         receivedOperatorPhone: deptResult.received_actioned_by_mobile_number ?? '-',
     };
@@ -234,9 +126,9 @@ function normalizeDeliveryInfo(deliveryInfo) {
 
     return {
         trackingNo: deliveryInfo.trackingNo ?? deliveryInfo.tracking_no ?? '-',
-        shippedDate: formatDate(deliveryInfo.shippedDate ?? deliveryInfo.shipped_date),
+        shippedDate: formatThaiDateTime(deliveryInfo.shippedDate ?? deliveryInfo.shipped_date),
         shippedDateValue: deliveryInfo.shippedDateValue ?? deliveryInfo.shipped_date ?? '',
-        recordedAt: formatDateTime(deliveryInfo.shippedRecordedAt ?? deliveryInfo.shipped_recorded_at),
+        recordedAt: formatThaiDateTime(deliveryInfo.shippedRecordedAt ?? deliveryInfo.shipped_recorded_at),
         operatorName: operatorName || '-',
         operatorPhone: deliveryInfo.shippedByMobileNumber
             ?? deliveryInfo.shipped_by_mobile_number
@@ -246,16 +138,25 @@ function normalizeDeliveryInfo(deliveryInfo) {
 }
 
 function buildDocumentsFromAttachments(attachments = []) {
-    return attachments.map((item, index) => ({
-        id: item.sortOrder ?? index + 1,
-        itemId: item.itemId ?? null,
-        n: item.documentName ?? item.document_name ?? `เอกสาร ${index + 1}`,
-        f: !!item.fileUploaded,
-        // support old flat filePath and new nested files[] array
-        p: item.filePath ?? item.file_path ?? item.files?.[0]?.fileUrl ?? item.files?.[0]?.filePath ?? item.files?.[0]?.url ?? null,
-        fileName: item.files?.[0]?.originalFileName ?? null,
-        upd: !!item.isUpdated,
-    }));
+    return attachments.map((item, index) => {
+        const filePath = item.filePath
+            ?? item.file_path
+            ?? item.files?.[0]?.fileUrl
+            ?? item.files?.[0]?.filePath
+            ?? item.files?.[0]?.url
+            ?? null;
+        const hasFile = Boolean(item.fileUploaded || item.file_uploaded || filePath || item.files?.length);
+
+        return {
+            id: item.sortOrder ?? index + 1,
+            itemId: item.itemId ?? null,
+            n: item.documentName ?? item.document_name ?? `เอกสาร ${index + 1}`,
+            f: hasFile,
+            p: filePath,
+            fileName: item.files?.[0]?.originalFileName ?? null,
+            upd: !!item.isUpdated,
+        };
+    });
 }
 
 function buildAttachmentResults(attachments = []) {
@@ -368,12 +269,13 @@ function normalizeDetailResponse(responseData, requestNo, currentRequests = []) 
         doc: responseData.documentName ?? requestFromList?.doc ?? (attachments[0]?.documentName ?? '-'),
         status: normalizedStepper?.statusLabel ?? fallbackStatus,
         // support both old (dateOfSubmission) and new (submittedAt) date key
-        date: responseData.dateOfSubmission ?? responseData.submittedAt ?? requestFromList?.date ?? '-',
-        resubmittedAt: rawResubmittedAt ? formatDateTime(rawResubmittedAt) : null,
-        cancelledAt: formatShortBangkokDateTime(rawCancelledAt),
+        date: formatThaiDateTime(responseData.dateOfSubmission ?? responseData.submittedAt ?? requestFromList?.date),
+        resubmittedAt: rawResubmittedAt ? formatThaiDateTime(rawResubmittedAt) : null,
+        cancelledAt: rawCancelledAt ? formatThaiDateTime(rawCancelledAt) : null,
         amt: responseData.amount != null ? String(responseData.amount) : (requestFromList?.amt ?? '-'),
         resubmit: responseData.isResubmit ?? requestFromList?.resubmit ?? false,
-        dob: profile.dateOfBirth ?? profile.DATE_OF_BIRTH ?? '-',
+        dob: formatThaiDate(profile.dateOfBirth ?? profile.DATE_OF_BIRTH),
+        dobValue: profile.dateOfBirth ?? profile.DATE_OF_BIRTH ?? null,
         age: profile.age ?? '-',
         email: profile.email ?? profile.EMAIL ?? '-',
         mobile: profile.mobile ?? profile.mobileNumber ?? profile.MOBILE_NUMBER ?? '-',
@@ -667,7 +569,7 @@ export const useDocumentRenewalsStore = defineStore({
                 const data = res.data?.data ?? {};
                 this.trackingEvents = Array.isArray(data.events)
                     ? data.events.map((event) => ({
-                        time: event.time ?? '-',
+                        time: formatThaiDateTime(event.time),
                         status: event.status ?? '-',
                         loc: [event.location, event.postcode].filter(value => value && value !== '-').join(' ') || '-',
                         cur: !!event.current,
@@ -739,7 +641,7 @@ export const useDocumentRenewalsStore = defineStore({
             const normalizedResults = Object.fromEntries(
                 Object.entries(results).map(([docId, value]) => {
                     const normalizedResult = value?.result === 'fix' ? 'fix' : value?.result === 'pass' ? 'pass' : '';
-                    const normalizedNote = normalizedResult === 'fix' ? (value?.note ?? '').trim() : '';
+                    const normalizedNote = (value?.note ?? '').trim();
 
                     return [String(docId), {
                         result: normalizedResult,

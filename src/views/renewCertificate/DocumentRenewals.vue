@@ -12,20 +12,63 @@
           <div class="search-grid">
             <div>
               <label class="form-label">Smart Seaman ID</label>
-              <input v-model="store.searchFilters.ssid" class="form-input" placeholder="Smart Seaman ID">
+              <div class="search-input-wrap">
+                <input v-model="store.searchFilters.ssid" class="form-input" placeholder="Smart Seaman ID">
+                <button
+                  v-if="store.searchFilters.ssid"
+                  type="button"
+                  class="clear-input-button"
+                  title="ล้าง Smart Seaman ID"
+                  aria-label="ล้าง Smart Seaman ID"
+                  @click="clearSearchFilter('ssid', $event)"
+                >
+                  <i class="light-icon-x" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
             <div>
               <label class="form-label">ชื่อ</label>
-              <input v-model="store.searchFilters.name" class="form-input" placeholder="ชื่อ">
+              <div class="search-input-wrap">
+                <input v-model="store.searchFilters.name" class="form-input" placeholder="ชื่อ">
+                <button
+                  v-if="store.searchFilters.name"
+                  type="button"
+                  class="clear-input-button"
+                  title="ล้างชื่อ"
+                  aria-label="ล้างชื่อ"
+                  @click="clearSearchFilter('name', $event)"
+                >
+                  <i class="light-icon-x" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
             <div>
               <label class="form-label">Request No.</label>
-              <input v-model="store.searchFilters.requestNo" class="form-input" placeholder="เช่น 2505001">
+              <div class="search-input-wrap">
+                <input v-model="store.searchFilters.requestNo" class="form-input" placeholder="เช่น 2505001">
+                <button
+                  v-if="store.searchFilters.requestNo"
+                  type="button"
+                  class="clear-input-button"
+                  title="ล้าง Request No."
+                  aria-label="ล้าง Request No."
+                  @click="clearSearchFilter('requestNo', $event)"
+                >
+                  <i class="light-icon-x" aria-hidden="true"></i>
+                </button>
+              </div>
             </div>
           </div>
           <div class="search-actions">
-            <button class="btn btn-primary" @click="store.search()">
-              <i class="light-icon-search"></i> ค้นหา
+            <button
+              class="btn btn-primary search-button"
+              :disabled="store.loading"
+              :aria-busy="store.loading"
+              @click="store.search()"
+            >
+              <span v-if="store.loading" class="search-spinner" aria-hidden="true"></span>
+              <i v-else class="light-icon-search" aria-hidden="true"></i>
+              {{ store.loading ? 'กำลังค้นหา...' : 'ค้นหา' }}
             </button>
           </div>
         </div>
@@ -64,6 +107,12 @@
                 </tr>
               </thead>
               <tbody>
+                <tr v-if="!store.loading && paginatedRequests.length === 0" class="empty-result-row">
+                  <td colspan="9">
+                    <i class="light-icon-search" aria-hidden="true"></i>
+                    <span>ไม่พบข้อมูล</span>
+                  </td>
+                </tr>
                 <tr 
                   v-for="req in paginatedRequests" 
                   :key="req.no"
@@ -250,6 +299,14 @@ export default {
     }
   },
   methods: {
+    clearSearchFilter(filterName, event) {
+      const input = event.currentTarget.closest('.search-input-wrap')?.querySelector('input')
+      this.store.searchFilters[filterName] = ''
+      this.store.search()
+      this.$nextTick(() => {
+        input?.focus()
+      })
+    },
     openDetail(req) {
       if (!req.no || req.no === '-') return
       const defaultDeptStatuses = ['รอผลกรมเจ้าท่า', 'รอรับเอกสารจากกรม']
@@ -362,6 +419,62 @@ export default {
     min-width: 0;
   }
 
+  .search-input-wrap {
+    position: relative;
+
+    .form-input {
+      width: 100%;
+      padding-right: 40px;
+    }
+  }
+
+  .clear-input-button {
+    position: absolute;
+    top: 50%;
+    right: 6px;
+    width: 28px;
+    height: 28px;
+    padding: 0;
+    border: 0;
+    border-radius: 4px;
+    background: transparent;
+    color: #6b7280;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transform: translateY(-50%);
+    cursor: pointer;
+
+    &:hover,
+    &:focus-visible {
+      background: #253244;
+      color: #e2e8f0;
+      outline: none;
+    }
+
+    i {
+      font-size: 14px;
+    }
+  }
+
+  .search-button {
+    min-width: 126px;
+
+    &:disabled {
+      cursor: wait;
+      opacity: 0.75;
+    }
+  }
+
+  .search-spinner {
+    width: 15px;
+    height: 15px;
+    border: 2px solid rgba(255, 255, 255, 0.35);
+    border-top-color: #fff;
+    border-radius: 50%;
+    animation: search-button-spin 0.7s linear infinite;
+  }
+
   .filter-tabs {
     scrollbar-width: thin;
     scrollbar-color: #4b5563 transparent;
@@ -382,6 +495,37 @@ export default {
         background: #1a2840;
       }
     }
+
+    .empty-result-row {
+      cursor: default;
+
+      td {
+        height: 140px;
+        color: #6b7280;
+        text-align: center;
+      }
+
+      i,
+      span {
+        display: block;
+      }
+
+      i {
+        margin-bottom: 8px;
+        color: #4b5563;
+        font-size: 28px;
+      }
+
+      &:hover td {
+        background: transparent;
+      }
+    }
+  }
+}
+
+@keyframes search-button-spin {
+  to {
+    transform: rotate(360deg);
   }
 }
 

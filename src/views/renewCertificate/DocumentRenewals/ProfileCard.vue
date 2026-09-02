@@ -67,11 +67,12 @@ export default {
   computed: {
     ageText() {
       if (this.request.age && this.request.age !== '-') return String(this.request.age)
-      if (!this.request.dob || this.request.dob === '-') return '-'
-      const dateParts = this.request.dob.match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
+      const dateOfBirth = this.request.dobValue ?? this.request.dob
+      if (!dateOfBirth || dateOfBirth === '-') return '-'
+      const dateParts = String(dateOfBirth).match(/^(\d{2})\/(\d{2})\/(\d{4})$/)
       const dob = dateParts
         ? new Date(Number(dateParts[3]), Number(dateParts[2]) - 1, Number(dateParts[1]))
-        : new Date(this.request.dob)
+        : new Date(dateOfBirth)
       if (Number.isNaN(dob.getTime())) return '-'
 
       const now = new Date()

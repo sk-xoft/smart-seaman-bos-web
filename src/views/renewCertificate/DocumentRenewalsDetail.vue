@@ -13,7 +13,12 @@
         </ul>
       </div>
 
-      <div v-if="selectedRequest">
+      <div v-if="!store || store.detailLoading" class="detail-state card bg-base-200">
+        <span class="detail-loading-spinner" aria-hidden="true"></span>
+        <p>กำลังโหลดรายละเอียดคำขอ...</p>
+      </div>
+
+      <div v-else-if="selectedRequest">
         <ProfileCard :request="selectedRequest" />
         <StepperCard :request="selectedRequest" :status="selectedRequest.status" />
 
@@ -45,6 +50,9 @@
             @save-pickup-change="handlePickupDateChanged"
             @save-receive-doc="handleReceiveDocSaved"
             @save-delivery-info="handleDeliveryInfoSaved"
+            @documents-saved="handleDocumentsSaved"
+            @upload-file="handleAttachmentUpload"
+            @request-action="showConfirmModal"
           />
           <DeliveryTab
             v-if="activeTab === 'delivery'"
@@ -58,8 +66,10 @@
         </div>
       </div>
 
-      <div v-else class="card bg-base-200 p-6 mt-6 text-center">
-        <p>ไม่พบข้อมูลคำขอที่เลือก</p>
+      <div v-else class="detail-state card bg-base-200">
+        <i class="light-icon-search" aria-hidden="true"></i>
+        <p>ยังไม่พบรายละเอียดคำขอนี้</p>
+        <span>กรุณากลับไปเลือกรายการคำขออีกครั้ง</span>
       </div>
     </div>
 
@@ -347,4 +357,49 @@ export default {
 </script>
 
 <style scoped lang="scss">
+.detail-state {
+  min-height: 180px;
+  margin-top: 24px;
+  padding: 32px;
+  color: #9ca3af;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+
+  i {
+    margin-bottom: 10px;
+    color: #4b5563;
+    font-size: 32px;
+  }
+
+  p {
+    margin: 0;
+    color: #e2e8f0;
+    font-size: 14px;
+    font-weight: 500;
+  }
+
+  span:not(.detail-loading-spinner) {
+    margin-top: 5px;
+    font-size: 12px;
+  }
+}
+
+.detail-loading-spinner {
+  width: 24px;
+  height: 24px;
+  margin-bottom: 12px;
+  border: 2px solid #374151;
+  border-top-color: #f97316;
+  border-radius: 50%;
+  animation: detail-spin 0.7s linear infinite;
+}
+
+@keyframes detail-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
 </style>

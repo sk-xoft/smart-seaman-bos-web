@@ -1,7 +1,7 @@
 <template>
   <div class="tab-content">
-    <div v-if="['รอตรวจเอกสาร', 'รอผู้ยื่นแก้ไข', 'รอผลกรมเจ้าท่า', 'รอรับเอกสารจากกรม'].includes(request.status)" class="empty-state">
-      <i class="ti ti-truck-delivery"></i>
+    <div v-if="!showDeliveryContent" class="empty-state">
+      <i class="light-icon-truck-delivery"></i>
       <span>ยังไม่มีข้อมูลการจัดส่ง</span>
     </div>
 
@@ -86,6 +86,8 @@
 </template>
 
 <script>
+import { formatThaiDateTime } from '@/helpers/date-format'
+
 export default {
   name: 'DeliveryTab',
   emits: ['refresh'],
@@ -112,6 +114,14 @@ export default {
     }
   },
   computed: {
+    showDeliveryContent() {
+      const deliveryStatuses = ['กำลังจัดส่ง', 'จัดส่งสำเร็จ']
+      const deliveryStatusCodes = ['DELIVERING', 'DELIVERED']
+      const statusCode = this.request?.stepper?.statusCode?.toUpperCase()
+
+      return (deliveryStatuses.includes(this.request.status) || deliveryStatusCodes.includes(statusCode))
+        && Boolean(this.request.deliveryInfo)
+    },
     deliveryInfo() {
       const delivery = this.request.deliveryInfo ?? {}
       const deptResult = this.request.deptResult ?? {}
@@ -162,10 +172,7 @@ export default {
     },
     lastUpdatedText() {
       if (!this.lastUpdated) return ''
-      return new Intl.DateTimeFormat('th-TH', {
-        dateStyle: 'short',
-        timeStyle: 'short'
-      }).format(new Date(this.lastUpdated))
+      return formatThaiDateTime(this.lastUpdated)
     }
   },
   methods: {

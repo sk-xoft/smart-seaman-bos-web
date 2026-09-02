@@ -6,8 +6,8 @@
         <col>
         <col style="width: 140px">
         <col>
-        <col style="width: 60px">
-        <col style="width: 90px">
+        <col v-if="!hideFileActions" style="width: 60px">
+        <col v-if="!hideFileActions" style="width: 90px">
       </colgroup>
       <thead>
         <tr>
@@ -18,8 +18,8 @@
             หมายเหตุ
             <span class="required" v-if="editable">(required เมื่อเลือก ต้องแก้ไข)</span>
           </th>
-          <th style="text-align: center">ไฟล์</th>
-          <th style="text-align: center">Actions</th>
+          <th v-if="!hideFileActions" style="text-align: center">ไฟล์</th>
+          <th v-if="!hideFileActions" style="text-align: center">Actions</th>
         </tr>
       </thead>
       <tbody>
@@ -60,14 +60,14 @@
             >
             <span v-else class="note-text">{{ docResults[doc.id].note || '—' }}</span>
           </td>
-          <td style="text-align: center">
-            <button class="btn-icon" :disabled="!doc.f" @click="viewFile(doc)">
+          <td v-if="!hideFileActions" style="text-align: center">
+            <button class="btn-icon" @click="viewFile(doc)">
               <i class="light-icon-eye"></i>
             </button>
           </td>
-          <td style="text-align: center">
+          <td v-if="!hideFileActions" style="text-align: center">
             <div class="action-buttons">
-              <button class="btn-icon" :disabled="!doc.f" @click="downloadFile(doc)">
+              <button class="btn-icon" @click="downloadFile(doc)">
                 <i class="light-icon-download"></i>
               </button>
               <button v-if="uploadable" class="btn-icon" @click="editFile(doc)">
@@ -79,9 +79,9 @@
       </tbody>
     </table>
 
-    <div v-if="editable || inspectionActionsDisabled" class="table-actions">
+    <div v-if="editable" class="table-actions">
       <div style="display: flex; justify-content: flex-end; margin-bottom: 8px">
-        <button class="btn btn-ghost" :disabled="inspectionActionsDisabled || isSaving" @click="saveDocs" :class="{ 'btn-saved': saveSuccess }">
+        <button class="btn btn-ghost" :disabled="isSaving" @click="saveDocs" :class="{ 'btn-saved': saveSuccess }">
           <i class="light-icon-device-floppy"></i> บันทึกผลตรวจ
         </button>
       </div>
@@ -156,11 +156,11 @@ export default {
       type: Boolean,
       default: false
     },
-    inspectionPending: {
+    hideFileActions: {
       type: Boolean,
       default: false
     },
-    inspectionActionsDisabled: {
+    inspectionPending: {
       type: Boolean,
       default: false
     },
@@ -219,9 +219,6 @@ export default {
       return 'rs-def'
     },
     handleResultChange(docId) {
-      if (this.docResults[docId].result !== 'fix') {
-        this.docResults[docId].note = ''
-      }
       this.emitChanged()
     },
     handleNoteChange() {
