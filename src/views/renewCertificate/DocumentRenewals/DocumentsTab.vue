@@ -21,6 +21,9 @@
             ยกเลิกเมื่อ {{ request.cancelledAt }}
           </span>
         </div>
+        <div v-else-if="isDocumentReviewPending" class="documents-title">
+          รายการเอกสารประกอบ
+        </div>
         <div v-else-if="!isPaymentPending" class="view-only-badge">
           <i class="light-icon-lock"></i>
           <span>ผ่านการตรวจแล้ว — view only</span>
@@ -219,6 +222,13 @@ export default {
   i {
     font-size: 14px;
   }
+}
+
+.documents-title {
+  margin-bottom: 12px;
+  color: #fff;
+  font-size: 14px;
+  font-weight: 600;
 }
 
 .documents-header {
