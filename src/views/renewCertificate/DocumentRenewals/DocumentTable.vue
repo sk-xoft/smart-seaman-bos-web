@@ -137,6 +137,10 @@
 </template>
 
 <script>
+import axios from 'axios'
+import { uuid } from 'vue-uuid'
+import { useAuthStore } from '@/stores'
+
 export default {
   name: 'DocumentTable',
   props: {
@@ -255,32 +259,39 @@ export default {
       window.open(fileUrl, '_blank', 'noopener')
     },
     async downloadFile(doc) {
-      const fileUrl = this.resolveFileUrl(doc, true)
+      const fileUrl = this.resolveAttachmentEndpoint(doc, true) || this.resolveFileUrl(doc, true)
       if (!fileUrl) {
         this.showToast('ไม่พบไฟล์ที่อัปโหลดสำหรับเอกสารนี้', true)
         return
       }
 
-      const fallbackName = `${(doc?.n || 'document').replace(/\s+/g, '_')}.pdf`
-      const fileName = doc?.fileName || this.extractFilename(doc?.p) || fallbackName
+      const fallbackFileName = this.getDownloadFileName(doc)
 
       try {
-        const response = await fetch(fileUrl)
-        if (!response.ok) {
-          throw new Error(`Download failed with status ${response.status}`)
+        const authStore = useAuthStore()
+        const token = authStore.user?.data?.token
+        const response = await axios.get(fileUrl, {
+          responseType: 'blob',
+          headers: {
+            Accept: 'application/octet-stream',
+            Language: 'TH',
+            'device-model': 'WEB_ADMIN',
+            'correlation-id': uuid.v4(),
+            ...(token ? { Authorization: `Bearer ${token}` } : {})
+          }
+        })
+
+        if (!response.data) {
+          throw new Error('Download returned no file data')
         }
 
-        const blob = await response.blob()
-        const objectUrl = URL.createObjectURL(blob)
+        const fileName = this.getFilenameFromContentDisposition(
+          response.headers['content-disposition']
+        ) || fallbackFileName
+        const objectUrl = URL.createObjectURL(response.data)
         this.triggerFileDownload(objectUrl, fileName)
-        URL.revokeObjectURL(objectUrl)
+        window.setTimeout(() => URL.revokeObjectURL(objectUrl), 0)
       } catch (error) {
-        const fallbackUrl = this.resolveAttachmentEndpoint(doc, true)
-        if (fallbackUrl && fallbackUrl !== fileUrl) {
-          this.triggerFileDownload(fallbackUrl, fileName)
-          return
-        }
-
         console.error(error)
         this.showToast('ดาวน์โหลดไฟล์ไม่สำเร็จ กรุณาลองใหม่', true)
       }
@@ -341,6 +352,54 @@ export default {
     },
     normalizeFilename(name) {
       return name.replace(/\s+/g, '_')
+    },
+    getDownloadFileName(doc) {
+      if (doc?.fileName) {
+        return doc.fileName
+      }
+
+      const documentName = (doc?.n || 'document')
+        .trim()
+        .replace(/[\\/:*?"<>|]+/g, '')
+      const extension = this.getFileExtension(doc?.fileName)
+        || this.getFileExtension(doc?.p)
+        || this.getExtensionFromMimeType(doc?.mimeType)
+        || 'pdf'
+
+      return `${this.normalizeFilename(documentName || 'document')}.${extension}`
+    },
+    getFileExtension(fileName) {
+      if (!fileName || typeof fileName !== 'string') {
+        return ''
+      }
+
+      const match = fileName.split('?')[0].match(/\.([a-z0-9]+)$/i)
+      return match ? match[1].toLowerCase() : ''
+    },
+    getExtensionFromMimeType(mimeType) {
+      const extensions = {
+        'application/pdf': 'pdf',
+        'image/jpeg': 'jpg',
+        'image/png': 'png'
+      }
+      return extensions[mimeType] || ''
+    },
+    getFilenameFromContentDisposition(header) {
+      if (!header || typeof header !== 'string') {
+        return ''
+      }
+
+      const utf8Match = header.match(/filename\*=UTF-8''([^;]+)/i)
+      if (utf8Match) {
+        try {
+          return decodeURIComponent(utf8Match[1])
+        } catch {
+          return utf8Match[1]
+        }
+      }
+
+      const filenameMatch = header.match(/filename="?([^";]+)"?/i)
+      return filenameMatch ? filenameMatch[1] : ''
     },
     resolveFileUrl(doc, download = false) {
       const filePath = doc?.fileUrl ?? doc?.p
