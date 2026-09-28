@@ -139,11 +139,12 @@ function normalizeDeliveryInfo(deliveryInfo) {
 
 function buildDocumentsFromAttachments(attachments = []) {
     return attachments.map((item, index) => {
+        const file = item.files?.[0] ?? null;
         const filePath = item.filePath
             ?? item.file_path
-            ?? item.files?.[0]?.fileUrl
-            ?? item.files?.[0]?.filePath
-            ?? item.files?.[0]?.url
+            ?? file?.fileUrl
+            ?? file?.filePath
+            ?? file?.url
             ?? null;
         const hasFile = Boolean(item.fileUploaded || item.file_uploaded || filePath || item.files?.length);
 
@@ -153,7 +154,10 @@ function buildDocumentsFromAttachments(attachments = []) {
             n: item.documentName ?? item.document_name ?? `เอกสาร ${index + 1}`,
             f: hasFile,
             p: filePath,
-            fileName: item.files?.[0]?.originalFileName ?? null,
+            fileUrl: file?.fileUrl ?? filePath,
+            fileName: file?.originalFileName ?? null,
+            mimeType: file?.mimeType ?? null,
+            fileSize: file?.fileSize ?? null,
             upd: !!item.isUpdated,
         };
     });

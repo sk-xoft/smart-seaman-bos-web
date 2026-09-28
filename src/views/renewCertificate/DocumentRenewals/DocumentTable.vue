@@ -183,6 +183,7 @@ export default {
       editingDocName: '',
       editingDocId: null,
       editingDocPath: '',
+      editingDocOriginalFilename: '',
       selectedFileName: '',
       selectedFile: null,
       isDragOver: false
@@ -295,7 +296,8 @@ export default {
     editFile(doc) {
       this.editingDocName = doc?.n ?? ''
       this.editingDocId = doc?.id ?? null
-      this.editingDocPath = doc?.p ?? ''
+      this.editingDocPath = doc?.fileUrl ?? doc?.p ?? ''
+      this.editingDocOriginalFilename = doc?.fileName ?? ''
       this.selectedFileName = ''
       this.selectedFile = null
       this.showEditModal = true
@@ -304,6 +306,7 @@ export default {
       this.showEditModal = false
       this.editingDocId = null
       this.editingDocPath = ''
+      this.editingDocOriginalFilename = ''
       this.selectedFile = null
       this.selectedFileName = ''
     },
@@ -340,7 +343,7 @@ export default {
       return name.replace(/\s+/g, '_')
     },
     resolveFileUrl(doc, download = false) {
-      const filePath = doc?.p
+      const filePath = doc?.fileUrl ?? doc?.p
       if (typeof filePath === 'string' && (
         filePath.startsWith('http://')
         || filePath.startsWith('https://')
@@ -399,7 +402,9 @@ export default {
       return this.normalizeFilename(this.editingDocName || '')
     },
     editingDocFilename() {
-      return this.extractFilename(this.editingDocPath) || `${this.normalizedDocFilename}_original.pdf`
+      return this.editingDocOriginalFilename
+        || this.extractFilename(this.editingDocPath)
+        || `${this.normalizedDocFilename}_original.pdf`
     }
   }
 }
